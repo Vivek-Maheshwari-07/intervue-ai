@@ -31,3 +31,7 @@ __pycache__/
 .venv
 env/
 venv/
+*.pyc
+
+# ChromaDB persistence
+data/chroma_db/
