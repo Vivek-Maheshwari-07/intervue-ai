@@ -4,6 +4,7 @@ import MatrixDashboard from './components/MatrixDashboard';
 import AIInterviewer from './components/AIInterviewer';
 import DelegationEngine from './components/DelegationEngine';
 import CandidateDetails from './components/CandidateDetails';
+import LiveInterview from './components/LiveInterview';
 import { INITIAL_CANDIDATES } from './data/mockData';
 
 export default function App() {
@@ -58,6 +59,10 @@ export default function App() {
           <CandidateDetails
             candidates={candidates}
           />
+        )}
+
+        {activeTab === 'live' && (
+          <LiveInterview />
         )}
       </main>
 
