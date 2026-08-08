@@ -1,8 +1,9 @@
 import React from 'react';
-import { LayoutDashboard, Bot, Zap, Users, Sparkles, Activity } from 'lucide-react';
+import { LayoutDashboard, Bot, Zap, Users, Sparkles, Activity, Radio } from 'lucide-react';
 
 export default function Navbar({ activeTab, setActiveTab, candidatesCount, totalReliability }) {
   const navItems = [
+    { id: 'live', label: 'Live Interview', icon: Radio, badge: '🔴 LIVE' },
     { id: 'matrix', label: 'Responsibility Matrix', icon: LayoutDashboard, badge: null },
     { id: 'interviewer', label: 'AI Technical Interviewer', icon: Bot, badge: 'Live AI' },
     { id: 'delegation', label: 'Task Delegation Engine', icon: Zap, badge: 'Smart' },

@@ -23,15 +23,25 @@ dist-ssr
 *.sln
 *.sw?
 
-# Python
+# Environment
+.env
+.env.local
+
+# Python / Backend
 __pycache__/
 *.py[cod]
+*.pyc
+*.pyo
 *$py.class
 .pytest_cache/
 .venv
+.venv/
 env/
 venv/
-*.pyc
 
-# ChromaDB persistence
+# Databases & Persistence
+*.db
+*.sqlite3
+backend/*.db
 data/chroma_db/
+
