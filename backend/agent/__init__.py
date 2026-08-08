@@ -9,6 +9,7 @@ from .evaluator import evaluate_answer, AnswerEvaluation, QUALITY_WEAK, QUALITY_
 from .question_planner import QuestionPlanner, PlannerAction, ACTION_HARDER, ACTION_CLARIFY, ACTION_MODERATE, ACTION_NEW_TOPIC
 from .prompts import SYSTEM_INTERVIEWER_PROMPT, QUESTION_GENERATION_PROMPT, ANSWER_EVALUATION_PROMPT, FINAL_FEEDBACK_PROMPT
 from .feedback import generate_final_feedback, FeedbackResult
+from .llm_client import LLMClient, OllamaLLMClient, MockLLMClient, OllamaConnectionError
 from .interview_agent import InterviewAgent
 
 __all__ = [
@@ -31,5 +32,9 @@ __all__ = [
     "FINAL_FEEDBACK_PROMPT",
     "generate_final_feedback",
     "FeedbackResult",
+    "LLMClient",
+    "OllamaLLMClient",
+    "MockLLMClient",
+    "OllamaConnectionError",
     "InterviewAgent",
 ]

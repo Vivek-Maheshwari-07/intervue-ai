@@ -10,9 +10,11 @@ Produces structured final feedback following the required schema:
 Aggregates performance scores and evaluation turn records from InterviewState.
 """
 
+import json
 from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Any, Optional
 from .state import InterviewState
+from .prompts import FINAL_FEEDBACK_PROMPT
 
 
 @dataclass
@@ -35,11 +37,12 @@ class FeedbackResult:
 
 def generate_final_feedback(
     state: InterviewState,
-    llm_generator_fn: Optional[Any] = None
+    llm_generator_fn: Optional[Any] = None,
+    llm_client: Optional[Any] = None
 ) -> Dict[str, Any]:
     """
     Generate final candidate feedback based on state history and scores.
-    Uses custom/LLM generator if provided, otherwise computes deterministic fallback.
+    Uses LLM client or custom generator if provided, otherwise computes deterministic fallback.
     """
     # Safe handling if no questions were asked
     if state.question_count == 0 or not state.conversation_history:
@@ -50,16 +53,40 @@ def generate_final_feedback(
             next=["Schedule a complete interview session."]
         ).to_dict()
 
-    # Delegate to LLM generator if available
+    # 1. Try LLM Client if provided
+    if llm_client is not None:
+        try:
+            prompt = FINAL_FEEDBACK_PROMPT.format(
+                candidate_info=state.candidate_info,
+                question_count=state.question_count,
+                covered_topics_count=state.get_unique_topics_count(),
+                covered_topics=", ".join(state.covered_topics),
+                covered_days_count=state.get_unique_days_count(),
+                covered_days=", ".join(state.covered_days),
+                average_score=state.get_average_score(),
+                evaluations_json=json.dumps(state.evaluations, indent=2)
+            )
+            parsed = llm_client.generate_json(prompt)
+            if isinstance(parsed, dict) and all(k in parsed for k in ["summary", "strengths", "gaps", "next"]):
+                return {
+                    "summary": str(parsed["summary"]),
+                    "strengths": [str(s) for s in parsed.get("strengths", [])],
+                    "gaps": [str(g) for g in parsed.get("gaps", [])],
+                    "next": [str(n) for n in parsed.get("next", [])]
+                }
+        except Exception:
+            pass  # Fallback to deterministic synthesis below
+
+    # 2. Try LLM generator function if provided
     if llm_generator_fn is not None:
         try:
             llm_result = llm_generator_fn(state)
             if isinstance(llm_result, dict) and all(k in llm_result for k in ["summary", "strengths", "gaps", "next"]):
                 return llm_result
         except Exception:
-            pass # Fallback to deterministic synthesis below
+            pass  # Fallback to deterministic synthesis below
 
-    # Deterministic Aggregation
+    # 3. Deterministic Aggregation Fallback
     avg_score = state.get_average_score()
     candidate_name = state.candidate_info.get("name", "Candidate")
     role = state.candidate_info.get("role", "Software Engineer")
@@ -71,7 +98,6 @@ def generate_final_feedback(
     for turn in state.conversation_history:
         score = turn.get("score")
         topic = turn.get("topic", "General Technical")
-        quality = turn.get("quality", "moderate")
 
         if score is not None and score >= 7.0:
             all_strengths.append(f"Demonstrated solid competency in {topic} (Turn {turn.get('turn_index')})")

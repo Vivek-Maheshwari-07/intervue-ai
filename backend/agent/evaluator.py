@@ -1,11 +1,12 @@
 """
 Answer Evaluator Module
 Evaluates technical answers on a 0-10 scale and maps scores to quality tiers.
-Provides pluggable evaluation backend (deterministic rule-based by default, easily replaceable with LLM).
+Provides pluggable evaluation backend (LLM-backed via Qwen3/LLMClient or deterministic rule-based fallback).
 """
 
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional, Callable
+from .prompts import ANSWER_EVALUATION_PROMPT
 
 # Configurable Quality Score Boundaries
 SCORE_THRESHOLD_WEAK = 3.0      # 0 <= score <= 3 -> weak
@@ -50,6 +51,52 @@ class AnswerEvaluation:
             "gaps": self.gaps,
             "reasoning": self.reasoning,
         }
+
+
+def evaluate_answer_with_llm(
+    llm_client: Any,
+    question: str,
+    answer: str,
+    curriculum_context: Optional[str] = None
+) -> AnswerEvaluation:
+    """
+    Evaluate candidate answer using Qwen3/LLMClient structured output.
+    Safely parses score, quality, strengths, gaps, and reasoning.
+    """
+    prompt = ANSWER_EVALUATION_PROMPT.format(
+        question=question,
+        answer=answer if answer and answer.strip() else "[No answer provided]",
+        curriculum_context=curriculum_context or "Standard technical curriculum context."
+    )
+
+    try:
+        parsed_json = llm_client.generate_json(prompt)
+        raw_score = float(parsed_json.get("score", 5.0))
+        score = max(0.0, min(10.0, round(raw_score, 1)))
+
+        quality = parsed_json.get("quality", "").lower()
+        if quality not in (QUALITY_WEAK, QUALITY_MODERATE, QUALITY_STRONG, QUALITY_EXCELLENT):
+            quality = map_score_to_quality(score)
+
+        strengths = parsed_json.get("strengths", [])
+        if not isinstance(strengths, list):
+            strengths = [str(strengths)]
+
+        gaps = parsed_json.get("gaps", [])
+        if not isinstance(gaps, list):
+            gaps = [str(gaps)]
+
+        reasoning = str(parsed_json.get("reasoning", "LLM evaluation completed."))
+
+        return AnswerEvaluation(
+            score=score,
+            quality=quality,
+            strengths=[str(s) for s in strengths],
+            gaps=[str(g) for g in gaps],
+            reasoning=reasoning
+        )
+    except Exception as e:
+        raise ValueError(f"LLM Answer Evaluation parsing failed: {e}")
 
 
 def _deterministic_mock_evaluator(
@@ -131,11 +178,14 @@ def evaluate_answer(
     answer: str,
     curriculum_context: Optional[str] = None,
     evaluator_fn: Optional[Callable[..., AnswerEvaluation]] = None,
+    llm_client: Any = None,
 ) -> AnswerEvaluation:
     """
     Main evaluation entry point.
-    Uses supplied custom/LLM evaluator function if provided, otherwise falls back to deterministic evaluator.
+    Uses llm_client if provided, or custom evaluator_fn, otherwise falls back to deterministic evaluator.
     """
+    if llm_client is not None:
+        return evaluate_answer_with_llm(llm_client, question, answer, curriculum_context)
     if evaluator_fn is not None:
         return evaluator_fn(question, answer, curriculum_context)
     return _deterministic_mock_evaluator(question, answer, curriculum_context)

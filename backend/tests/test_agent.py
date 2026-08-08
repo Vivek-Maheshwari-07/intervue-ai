@@ -1,12 +1,12 @@
 """
-Independent Unit Tests for Person 1 AI Interview Agent Foundation.
+Independent Unit Tests for Person 1 AI Interview Agent & LLM Integration.
 Runs completely offline without React, FastAPI, ChromaDB, external keys, or network access.
 """
 
 import unittest
 from backend.agent.state import InterviewState
 from backend.agent.evaluator import (
-    evaluate_answer, AnswerEvaluation,
+    evaluate_answer, AnswerEvaluation, evaluate_answer_with_llm,
     QUALITY_WEAK, QUALITY_MODERATE, QUALITY_STRONG, QUALITY_EXCELLENT
 )
 from backend.agent.question_planner import (
@@ -15,6 +15,7 @@ from backend.agent.question_planner import (
 )
 from backend.agent.interview_agent import InterviewAgent, MINIMUM_REQUIRED_QUESTIONS, MINIMUM_REQUIRED_UNIQUE_UNITS
 from backend.agent.feedback import generate_final_feedback
+from backend.agent.llm_client import MockLLMClient, OllamaLLMClient, OllamaConnectionError
 
 
 class TestInterviewAgentFoundation(unittest.TestCase):
@@ -22,6 +23,16 @@ class TestInterviewAgentFoundation(unittest.TestCase):
     def setUp(self):
         self.state = InterviewState(session_id="test_session")
         self.planner = QuestionPlanner()
+        self.mock_llm = MockLLMClient(
+            default_response="How do you architect a zero-downtime microservice migration?",
+            default_json={
+                "score": 8.0,
+                "quality": "strong",
+                "strengths": ["Solid technical grasp"],
+                "gaps": ["Could mention edge case recovery"],
+                "reasoning": "Good architectural explanation."
+            }
+        )
 
     # 1. Test Evaluator Quality Mapping & Deterministic Scoring
     def test_strong_answer_evaluator(self):
@@ -174,6 +185,110 @@ class TestInterviewAgentFoundation(unittest.TestCase):
         self.assertIsInstance(feedback["strengths"], list)
         self.assertIsInstance(feedback["gaps"], list)
         self.assertIsInstance(feedback["next"], list)
+
+    # ==================== TASK 2 SPECIFIC LLM TESTS ====================
+
+    def test_mock_llm_question_generation(self):
+        """Verify InterviewAgent uses MockLLMClient for question generation."""
+        agent = InterviewAgent(llm_client=self.mock_llm)
+        res = agent.start_interview()
+
+        self.assertEqual(res["question"], "How do you architect a zero-downtime microservice migration?")
+        self.assertGreater(len(self.mock_llm.call_history), 0)
+
+    def test_strong_answer_harder_instruction(self):
+        """Verify strong answer evaluation directs planner to HARDER action."""
+        mock_eval = MockLLMClient(default_json={"score": 9.0, "quality": "excellent", "strengths": ["Clear design"], "gaps": [], "reasoning": "Great"})
+        agent = InterviewAgent(llm_client=mock_eval)
+        agent.start_interview()
+        res = agent.process_answer("Used Redis and Kafka for async decoupling.")
+
+        self.assertEqual(res["action"], ACTION_HARDER)
+        self.assertEqual(res["evaluation"]["score"], 9.0)
+
+    def test_weak_answer_clarification_instruction(self):
+        """Verify weak answer evaluation directs planner to CLARIFY action."""
+        mock_eval = MockLLMClient(default_json={"score": 2.0, "quality": "weak", "strengths": [], "gaps": ["No detail"], "reasoning": "Blank"})
+        agent = InterviewAgent(llm_client=mock_eval)
+        agent.start_interview()
+        res = agent.process_answer("idk")
+
+        self.assertEqual(res["action"], ACTION_CLARIFY)
+
+    def test_moderate_answer_moderate_instruction(self):
+        """Verify moderate answer evaluation directs planner to MODERATE action."""
+        mock_eval = MockLLMClient(default_json={"score": 5.0, "quality": "moderate", "strengths": ["Basic attempt"], "gaps": ["Lacks edge cases"], "reasoning": "Okay"})
+        agent = InterviewAgent(llm_client=mock_eval)
+        agent.start_interview()
+        res = agent.process_answer("Used basic SQL queries.")
+
+        self.assertEqual(res["action"], ACTION_MODERATE)
+
+    def test_conversation_history_reaches_llm(self):
+        """Verify prompt generated for LLM includes conversation history."""
+        agent = InterviewAgent(llm_client=self.mock_llm)
+        agent.start_interview()
+        agent.process_answer("First answer attempt")
+        
+        # Check call history for prompt text containing conversation history
+        last_call = self.mock_llm.call_history[-1]
+        self.assertIn("First answer attempt", last_call["prompt"])
+
+    def test_candidate_info_reaches_llm(self):
+        """Verify candidate information is passed into LLM prompt."""
+        candidate_info = {"name": "Alex Tech", "role": "Senior Staff Engineer"}
+        agent = InterviewAgent(llm_client=self.mock_llm)
+        agent.start_interview(candidate_info=candidate_info)
+
+        first_call = self.mock_llm.call_history[0]
+        self.assertIn("Alex Tech", first_call["prompt"])
+
+    def test_curriculum_context_injection(self):
+        """Verify curriculum context is injected into LLM evaluation and question generation."""
+        mock_retriever = lambda query: "Custom Curriculum Context: RAG Vector Search Result"
+        agent = InterviewAgent(llm_client=self.mock_llm, curriculum_retriever=mock_retriever)
+        agent.start_interview()
+        agent.process_answer("Answer using curriculum")
+
+        # Verify curriculum context appeared in prompt
+        eval_prompt_call = [c for c in self.mock_llm.call_history if c["type"] == "generate_json"][0]
+        self.assertIn("Custom Curriculum Context", eval_prompt_call["prompt"])
+
+    def test_evaluator_structured_output_parsing(self):
+        """Verify structured JSON output from LLM is correctly parsed into AnswerEvaluation."""
+        eval_result = evaluate_answer_with_llm(
+            self.mock_llm,
+            question="Explain database indexing",
+            answer="Using B-Trees and composite indexes."
+        )
+
+        self.assertEqual(eval_result.score, 8.0)
+        self.assertEqual(eval_result.quality, "strong")
+        self.assertEqual(eval_result.strengths, ["Solid technical grasp"])
+
+    def test_malformed_llm_output_handling(self):
+        """Verify parsing handles malformed or non-JSON output safely."""
+        bad_llm = MockLLMClient(default_response="Not a valid JSON string")
+        with self.assertRaises(ValueError):
+            evaluate_answer_with_llm(bad_llm, "Question", "Answer")
+
+    def test_feedback_schema_valid_with_llm(self):
+        """Verify feedback generated using MockLLMClient matches required JSON schema."""
+        mock_feedback_llm = MockLLMClient(
+            default_json={
+                "summary": "Candidate demonstrated strong skills.",
+                "strengths": ["Architecture design"],
+                "gaps": ["Error handling"],
+                "next": ["Deep dive on distributed locks"]
+            }
+        )
+        agent = InterviewAgent(llm_client=mock_feedback_llm)
+        agent.start_interview()
+        agent.process_answer("My answer")
+        feedback = agent.generate_feedback()
+
+        self.assertEqual(set(feedback.keys()), {"summary", "strengths", "gaps", "next"})
+        self.assertEqual(feedback["summary"], "Candidate demonstrated strong skills.")
 
 
 if __name__ == "__main__":

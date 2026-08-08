@@ -29,12 +29,14 @@ class InterviewAgent:
         curriculum_retriever: Optional[Callable[[str], str]] = None,
         llm_generator_fn: Optional[Callable[[str], str]] = None,
         evaluator_fn: Optional[Callable[..., AnswerEvaluation]] = None,
+        llm_client: Optional[Any] = None,
     ):
         self.state = state or InterviewState()
         self.planner = planner or QuestionPlanner()
         self.curriculum_retriever = curriculum_retriever
         self.llm_generator_fn = llm_generator_fn
         self.evaluator_fn = evaluator_fn
+        self.llm_client = llm_client
         self.last_asked_question: Optional[str] = None
         self.questions_on_current_topic: int = 0
 
@@ -107,12 +109,13 @@ class InterviewAgent:
         # 1. Retrieve relevant curriculum context (Person 2 pluggable interface)
         curriculum_context = custom_curriculum_context or self.get_curriculum_context(topic)
 
-        # 2. Evaluate candidate answer (Phase 4)
+        # 2. Evaluate candidate answer (Phase 4 / Task 2)
         evaluation = evaluate_answer(
             question=question_asked,
             answer=answer,
             curriculum_context=curriculum_context,
-            evaluator_fn=self.evaluator_fn
+            evaluator_fn=self.evaluator_fn,
+            llm_client=self.llm_client
         )
 
         # 3. Plan next action using adaptive policy engine (Phase 5)
@@ -208,22 +211,42 @@ class InterviewAgent:
     ) -> str:
         """
         Generate next interview question based on planner action and curriculum context.
-        Uses LLM generator if attached, or deterministic fallback templates.
+        Uses llm_client if attached, or llm_generator_fn, or deterministic fallback templates.
         """
         topic = action.target_topic or self.state.current_topic or "System Architecture"
+        day = action.target_day or self.state.current_day or "Day 1"
 
-        if self.llm_generator_fn:
+        strict_system_prompt = (
+            "You are a technical interviewer. "
+            "Ask exactly ONE question. "
+            "Do not explain your reasoning. "
+            "Do not provide multiple alternatives. "
+            "Do not provide the answer. "
+            "Do not add headings unless necessary. "
+            "Return only the interview question."
+        )
+
+        prompt = QUESTION_GENERATION_PROMPT.format(
+            candidate_info=self.state.candidate_info,
+            topic=topic,
+            day=day,
+            action_type=action.action_type,
+            action_reasoning=action.reasoning,
+            difficulty_delta=action.difficulty_delta,
+            curriculum_context=curriculum_context or "Standard technical curriculum context.",
+            conversation_history=self.state.conversation_history[-3:]
+        )
+
+        if self.llm_client is not None:
             try:
-                prompt = QUESTION_GENERATION_PROMPT.format(
-                    candidate_info=self.state.candidate_info,
-                    topic=topic,
-                    day=action.target_day or self.state.current_day,
-                    action_type=action.action_type,
-                    action_reasoning=action.reasoning,
-                    difficulty_delta=action.difficulty_delta,
-                    curriculum_context=curriculum_context or "Standard curriculum background.",
-                    conversation_history=self.state.conversation_history[-3:]
-                )
+                generated = self.llm_client.generate(prompt, system_prompt=strict_system_prompt)
+                if generated and len(generated.strip()) > 10:
+                    return generated.strip()
+            except Exception:
+                pass
+
+        if self.llm_generator_fn is not None:
+            try:
                 generated = self.llm_generator_fn(prompt)
                 if generated and len(generated.strip()) > 10:
                     return generated.strip()
@@ -255,4 +278,8 @@ class InterviewAgent:
         """
         Synthesize final feedback matching required schema (Phase 9).
         """
-        return generate_final_feedback(self.state, self.llm_generator_fn)
+        return generate_final_feedback(
+            self.state,
+            llm_generator_fn=self.llm_generator_fn,
+            llm_client=self.llm_client
+        )
