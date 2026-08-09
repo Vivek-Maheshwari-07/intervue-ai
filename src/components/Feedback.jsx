@@ -27,7 +27,7 @@ export default function Feedback({ feedback, questionCount, topicsCovered, cover
   ];
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto animate-fadeIn bg-[#FFFFFF] p-8 rounded-xl border border-[#E2E8F0] shadow-xs">
+    <div className="space-y-6 max-w-4xl mx-auto animate-fadeIn bg-[#FFFFFF] p-4 sm:p-8 rounded-xl border border-[#E2E8F0] shadow-xs">
       {/* Header Assessment Card */}
       <div className="pb-6 border-b border-[#E2E8F0] space-y-4">
         <div className="flex items-center space-x-2 text-xs font-mono font-semibold text-[#2563EB] uppercase tracking-wider">
@@ -37,7 +37,7 @@ export default function Feedback({ feedback, questionCount, topicsCovered, cover
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
-            <h2 className="text-2xl font-bold text-[#0F172A] tracking-tight">
+            <h2 className="text-xl sm:text-2xl font-bold text-[#0F172A] tracking-tight">
               Technical Interview Complete
             </h2>
             <p className="text-xs text-[#475569]">
@@ -45,7 +45,7 @@ export default function Feedback({ feedback, questionCount, topicsCovered, cover
             </p>
           </div>
 
-          <div className="bg-[#EFF6FF] p-4 rounded-xl border border-[#BFDBFE] text-right font-mono sm:w-48">
+          <div className="bg-[#EFF6FF] p-4 rounded-xl border border-[#BFDBFE] text-center sm:text-right font-mono w-full sm:w-48 flex-shrink-0">
             <span className="text-[11px] text-[#2563EB] block font-semibold uppercase">READINESS SCORE</span>
             <span className="text-3xl font-extrabold text-[#1E40AF]">{overallScore} <span className="text-sm font-normal text-[#64748B]">/ 100</span></span>
           </div>
@@ -154,7 +154,7 @@ export default function Feedback({ feedback, questionCount, topicsCovered, cover
       <AIUsageLogSection className="mt-4" />
 
       {/* Footer Attribution */}
-      <div className="pt-4 border-t border-[#E2E8F0] flex items-center justify-between text-xs text-[#64748B]">
+      <div className="pt-4 border-t border-[#E2E8F0] flex flex-col sm:flex-row items-center justify-between text-xs text-[#64748B] gap-2">
         <span>INTERVUE AI Assessment Engine</span>
         <span>Engineered by <strong>Vivek Maheshwari, Aayush Malhotra, Manav Lathiya</strong></span>
       </div>

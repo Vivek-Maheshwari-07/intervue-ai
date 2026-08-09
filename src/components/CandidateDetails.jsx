@@ -60,12 +60,12 @@ export default function CandidateDetails({ candidates, onStartInterview }) {
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       {/* Header Banner */}
-      <div className="bg-[#FFFFFF] rounded-xl p-6 border border-[#E2E8F0] shadow-xs space-y-2 select-none">
+      <div className="bg-[#FFFFFF] rounded-xl p-4 sm:p-6 border border-[#E2E8F0] shadow-xs space-y-2 select-none">
         <div className="flex items-center space-x-2 text-xs font-mono font-semibold text-[#2563EB] uppercase tracking-wider">
           <Sparkles className="w-3.5 h-3.5" />
           <span>Candidate Profiles & Readiness</span>
         </div>
-        <h1 className="text-2xl font-bold text-[#0F172A] tracking-tight">
+        <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A] tracking-tight">
           Select Candidate to Begin AI Technical Interview
         </h1>
         <p className="text-xs text-[#475569] leading-relaxed max-w-2xl font-sans">
@@ -83,9 +83,9 @@ export default function CandidateDetails({ candidates, onStartInterview }) {
         </div>
       )}
 
-      {/* Main Container */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Left Column: Candidate Roster Selector */}
+      {/* Main Responsive Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Candidate Roster Selector Column */}
         <div className="space-y-3 select-none">
           <div className="text-xs font-mono font-semibold text-[#64748B] uppercase tracking-wider">
             Candidate Roster ({candidates.length})
@@ -100,14 +100,14 @@ export default function CandidateDetails({ candidates, onStartInterview }) {
                   onClick={() => handleSelectCandidate(c)}
                   tabIndex={0}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSelectCandidate(c); }}
-                  className={`cursor-pointer p-4 rounded-xl border transition-all select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] ${
+                  className={`cursor-pointer p-3.5 sm:p-4 rounded-xl border transition-all select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] ${
                     isSelected
                       ? 'bg-[#EFF6FF]/60 border-[#2563EB] ring-1 ring-[#2563EB] shadow-xs'
                       : 'bg-[#FFFFFF] border-[#E2E8F0] hover:border-[#CBD5E1] hover:bg-[#F8FAFC]'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <div className="font-bold text-[#0F172A] text-sm flex items-center space-x-1.5">
+                    <div className="font-bold text-[#0F172A] text-sm flex items-center space-x-1.5 flex-wrap gap-y-1">
                       <span>{c.name}</span>
                       {isSelected && (
                         <span className="inline-flex items-center space-x-1 text-[10px] font-mono text-[#2563EB] bg-[#EFF6FF] px-1.5 py-0.2 rounded border border-[#BFDBFE]">
@@ -115,7 +115,7 @@ export default function CandidateDetails({ candidates, onStartInterview }) {
                         </span>
                       )}
                     </div>
-                    <span className="text-xs font-mono font-semibold text-[#2563EB] bg-[#EFF6FF] px-2 py-0.5 rounded border border-[#BFDBFE]">
+                    <span className="text-xs font-mono font-semibold text-[#2563EB] bg-[#EFF6FF] px-2 py-0.5 rounded border border-[#BFDBFE] flex-shrink-0 ml-2">
                       {c.responsibility}% Resp
                     </span>
                   </div>
@@ -134,38 +134,38 @@ export default function CandidateDetails({ candidates, onStartInterview }) {
           </button>
         </div>
 
-        {/* Right 2 Columns: Candidate Overview Card */}
-        <div className="md:col-span-2 space-y-6 bg-[#FFFFFF] p-6 rounded-xl border border-[#E2E8F0] shadow-xs">
+        {/* Candidate Overview Card Column */}
+        <div className="lg:col-span-2 space-y-6 bg-[#FFFFFF] p-4 sm:p-6 rounded-xl border border-[#E2E8F0] shadow-xs">
           {/* Candidate Profile Header */}
           <div className="flex flex-col sm:flex-row sm:items-start justify-between pb-5 border-b border-[#E2E8F0] gap-4">
             <div className="space-y-1">
               <span className="text-xs font-mono text-[#64748B] uppercase tracking-wider select-none">Target Interviewee</span>
-              <h2 className="text-2xl font-bold text-[#0F172A]">{selectedCandidate.name}</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-[#0F172A]">{selectedCandidate.name}</h2>
               <p className="text-xs text-[#475569]">{selectedCandidate.role} · AI Cohort Candidate</p>
             </div>
 
-            <div className="sm:text-right bg-[#F8FAFC] p-3 rounded-xl border border-[#E2E8F0] select-none">
+            <div className="bg-[#F8FAFC] p-3 rounded-xl border border-[#E2E8F0] select-none flex-shrink-0">
               <span className="text-[11px] text-[#64748B] block font-mono">Responsibility Ownership</span>
               <span className="text-xl font-bold text-[#2563EB] font-mono">{selectedCandidate.responsibility}%</span>
               <span className="text-[11px] text-[#475569] block font-mono">Max Difficulty: Level {selectedCandidate.maxDifficulty}</span>
             </div>
           </div>
 
-          {/* Learning Progress Metrics */}
-          <div className="grid grid-cols-3 gap-4 py-2 border-b border-[#E2E8F0] select-none">
-            <div>
+          {/* Learning Progress Metrics Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 py-2 border-b border-[#E2E8F0] select-none">
+            <div className="bg-[#F8FAFC] sm:bg-transparent p-3 sm:p-0 rounded-lg sm:rounded-none border sm:border-none border-[#E2E8F0]">
               <div className="text-xs font-medium text-[#64748B]">Cohort Track</div>
               <div className="text-sm font-semibold text-[#0F172A] mt-0.5">Cohort 2026-A</div>
               <div className="text-xs text-[#475569]">AI Engineering</div>
             </div>
 
-            <div>
+            <div className="bg-[#F8FAFC] sm:bg-transparent p-3 sm:p-0 rounded-lg sm:rounded-none border sm:border-none border-[#E2E8F0]">
               <div className="text-xs font-medium text-[#64748B]">Missions Status</div>
               <div className="text-sm font-semibold text-[#0F172A] mt-0.5">24 Completed</div>
               <div className="text-xs text-[#16A34A] font-medium">Ready for AI Eval</div>
             </div>
 
-            <div>
+            <div className="bg-[#F8FAFC] sm:bg-transparent p-3 sm:p-0 rounded-lg sm:rounded-none border sm:border-none border-[#E2E8F0]">
               <div className="text-xs font-medium text-[#64748B]">Curriculum Mastery</div>
               <div className="text-sm font-semibold text-[#0F172A] mt-0.5">78% Progress</div>
               <div className="w-full h-1.5 bg-[#E2E8F0] rounded-full mt-1.5 overflow-hidden">
@@ -194,8 +194,8 @@ export default function CandidateDetails({ candidates, onStartInterview }) {
                   key={i}
                   className="flex items-center justify-between p-3 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0]"
                 >
-                  <span className="font-medium text-[#0F172A]">{topic.name}</span>
-                  <span className="text-[11px] font-mono text-[#64748B] ml-2 flex-shrink-0 select-none">{topic.day}</span>
+                  <span className="font-medium text-[#0F172A] truncate mr-2">{topic.name}</span>
+                  <span className="text-[11px] font-mono text-[#64748B] flex-shrink-0 select-none">{topic.day}</span>
                 </div>
               ))}
             </div>
@@ -203,14 +203,14 @@ export default function CandidateDetails({ candidates, onStartInterview }) {
 
           {/* Primary Hero CTA */}
           {onStartInterview && (
-            <div className="pt-4 border-t border-[#E2E8F0] flex items-center justify-between">
-              <span className="text-xs text-[#64748B] select-none">
+            <div className="pt-4 border-t border-[#E2E8F0] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <span className="text-xs text-[#64748B] select-none text-center sm:text-left">
                 Engineered by <strong>Vivek Maheshwari, Aayush Malhotra, Manav Lathiya</strong>
               </span>
 
               <button
                 onClick={() => onStartInterview(selectedCandidate.id)}
-                className="flex items-center space-x-2 px-6 py-3 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold text-xs transition-all shadow-xs cursor-pointer select-none"
+                className="flex items-center justify-center space-x-2 px-6 py-3 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold text-xs transition-all shadow-xs cursor-pointer select-none w-full sm:w-auto"
               >
                 <span>Start AI Interview</span>
                 <ArrowRight className="w-4 h-4" />

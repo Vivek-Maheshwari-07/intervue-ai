@@ -13,23 +13,23 @@ export default function Navbar({ activeTab, setActiveTab, candidatesCount }) {
         <div className="flex items-center justify-between h-16">
           {/* Brand Logo */}
           <div 
-            className="flex items-center space-x-3 cursor-pointer group select-none" 
+            className="flex items-center space-x-2.5 sm:space-x-3 cursor-pointer group select-none" 
             onClick={() => setActiveTab('candidates')}
           >
-            <div className="w-9 h-9 rounded-xl bg-[#2563EB] flex items-center justify-center text-white font-bold text-sm shadow-xs group-hover:bg-[#1D4ED8] transition-colors">
-              <Sparkles className="w-5 h-5" />
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#2563EB] flex items-center justify-center text-white font-bold text-sm shadow-xs group-hover:bg-[#1D4ED8] transition-colors flex-shrink-0">
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div className="flex flex-col">
-              <span className="font-extrabold text-base tracking-tight text-[#0F172A] font-mono">
+              <span className="font-extrabold text-sm sm:text-base tracking-tight text-[#0F172A] font-mono leading-none">
                 INTERVUE <span className="text-[#2563EB]">AI</span>
               </span>
-              <span className="text-[11px] text-[#64748B] tracking-normal font-sans">
+              <span className="text-[10px] sm:text-[11px] text-[#64748B] tracking-normal font-sans mt-0.5 truncate max-w-[170px] sm:max-w-none">
                 Adaptive Technical Interview Agent
               </span>
             </div>
           </div>
 
-          {/* Navigation Links */}
+          {/* Desktop Navigation Links */}
           <nav className="hidden md:flex items-center space-x-1 select-none">
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -57,18 +57,19 @@ export default function Navbar({ activeTab, setActiveTab, candidatesCount }) {
           </nav>
 
           {/* Right Status Indicator */}
-          <div className="flex items-center space-x-3 select-none">
-            <div className="hidden lg:flex items-center space-x-2 text-xs font-mono text-[#64748B] bg-[#F8FAFC] px-3 py-1.5 rounded-xl border border-[#E2E8F0]">
-              <span className="w-2 h-2 rounded-full bg-[#16A34A] animate-pulse" />
-              <span>{candidatesCount} Candidate Profiles</span>
-              <span>•</span>
-              <span className="text-[#2563EB] font-bold">RAG Grounded</span>
+          <div className="flex items-center space-x-2 sm:space-x-3 select-none">
+            <div className="flex items-center space-x-1.5 sm:space-x-2 text-[11px] sm:text-xs font-mono text-[#64748B] bg-[#F8FAFC] px-2.5 py-1.5 rounded-xl border border-[#E2E8F0]">
+              <span className="w-2 h-2 rounded-full bg-[#16A34A] animate-pulse flex-shrink-0" />
+              <span className="hidden xs:inline">{candidatesCount} Candidates</span>
+              <span className="xs:hidden">{candidatesCount}</span>
+              <span className="hidden sm:inline">•</span>
+              <span className="hidden sm:inline text-[#2563EB] font-bold">RAG Grounded</span>
             </div>
           </div>
         </div>
 
-        {/* Mobile Tab Bar */}
-        <div className="md:hidden flex overflow-x-auto space-x-2 py-2 border-t border-[#E2E8F0] select-none">
+        {/* Mobile Touch Navigation Tabs */}
+        <div className="md:hidden grid grid-cols-2 gap-2 py-2 border-t border-[#E2E8F0] select-none">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -76,14 +77,14 @@ export default function Navbar({ activeTab, setActiveTab, candidatesCount }) {
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`flex-shrink-0 flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-semibold ${
+                className={`flex items-center justify-center space-x-2 py-2.5 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   isActive
-                    ? 'bg-[#EFF6FF] text-[#2563EB] border border-[#BFDBFE]'
-                    : 'text-[#64748B]'
+                    ? 'bg-[#EFF6FF] text-[#2563EB] border border-[#BFDBFE] shadow-xs'
+                    : 'bg-[#F8FAFC] text-[#64748B] border border-[#E2E8F0]'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{item.label}</span>
+                <Icon className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate">{item.label}</span>
               </button>
             );
           })}

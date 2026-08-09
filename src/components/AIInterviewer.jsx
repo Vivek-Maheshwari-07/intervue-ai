@@ -104,10 +104,10 @@ export default function AIInterviewer({
 
   const isFollowUp = conversationHistory.length > 2 && questionNumber > 1;
 
-  // 1. COMPLETED SCREEN (Light Theme Assessment Report)
+  // 1. COMPLETED SCREEN (Assessment Report)
   if (status === 'completed' && feedback) {
     return (
-      <div className="space-y-6 max-w-4xl mx-auto animate-fadeIn">
+      <div className="space-y-6 max-w-4xl mx-auto animate-fadeIn px-2 sm:px-0">
         <Feedback
           feedback={feedback}
           questionCount={questionNumber}
@@ -118,7 +118,7 @@ export default function AIInterviewer({
 
         {/* Conversation Transcript Review */}
         {conversationHistory.length > 0 && (
-          <div className="bg-[#FFFFFF] rounded-xl border border-[#E2E8F0] p-6 space-y-4 shadow-xs">
+          <div className="bg-[#FFFFFF] rounded-xl border border-[#E2E8F0] p-4 sm:p-6 space-y-4 shadow-xs">
             <div className="flex items-center space-x-2 border-b border-[#E2E8F0] pb-3 select-none">
               <MessageSquare className="w-4 h-4 text-[#2563EB]" />
               <h3 className="text-xs font-mono font-semibold text-[#0F172A] uppercase tracking-wider">
@@ -126,23 +126,23 @@ export default function AIInterviewer({
               </h3>
             </div>
 
-            <div className="space-y-3 max-h-96 overflow-y-auto pr-2 font-sans">
+            <div className="space-y-3 max-h-96 overflow-y-auto pr-1 sm:pr-2 font-sans">
               {conversationHistory.map((msg, idx) => {
                 const isAI = msg.role === 'interviewer';
                 return (
                   <div
                     key={idx}
-                    className={`p-4 rounded-xl border text-xs leading-relaxed ${
+                    className={`p-3.5 sm:p-4 rounded-xl border text-xs leading-relaxed ${
                       isAI
                         ? 'bg-[#F8FAFC] border-[#E2E8F0] text-[#0F172A]'
-                        : 'bg-[#EFF6FF] border-[#BFDBFE] text-[#0F172A] ml-6'
+                        : 'bg-[#EFF6FF] border-[#BFDBFE] text-[#0F172A] ml-2 sm:ml-6'
                     }`}
                   >
                     <div className="flex items-center justify-between font-mono text-[11px] text-[#64748B] mb-1.5 select-none">
                       <span className="font-semibold uppercase text-[#2563EB]">
                         {isAI ? 'AI Interviewer' : 'Candidate Response'}
                       </span>
-                      {msg.topic && <span>{msg.topic}</span>}
+                      {msg.topic && <span className="truncate max-w-[120px] sm:max-w-none">{msg.topic}</span>}
                     </div>
                     <p className="whitespace-pre-wrap">{msg.content}</p>
                   </div>
@@ -155,7 +155,7 @@ export default function AIInterviewer({
         <div className="text-center pt-2 select-none">
           <button
             onClick={resetSession}
-            className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-xl font-semibold text-xs bg-[#FFFFFF] border border-[#E2E8F0] text-[#0F172A] hover:bg-[#F8FAFC] transition-colors cursor-pointer shadow-xs select-none"
+            className="inline-flex items-center justify-center space-x-2 w-full sm:w-auto px-5 py-3 rounded-xl font-semibold text-xs bg-[#FFFFFF] border border-[#E2E8F0] text-[#0F172A] hover:bg-[#F8FAFC] transition-colors cursor-pointer shadow-xs select-none"
           >
             <RotateCcw className="w-4 h-4 text-[#64748B]" />
             <span>Start New Candidate Session</span>
@@ -165,17 +165,17 @@ export default function AIInterviewer({
     );
   }
 
-  // 2. IDLE / SETUP SCREEN (Light Theme Preparation)
+  // 2. IDLE / SETUP SCREEN
   if (status === 'idle') {
     return (
-      <div className="space-y-6 max-w-4xl mx-auto animate-fadeIn">
-        <div className="bg-[#FFFFFF] rounded-xl p-8 border border-[#E2E8F0] shadow-xs space-y-6">
+      <div className="space-y-6 max-w-4xl mx-auto animate-fadeIn px-2 sm:px-0">
+        <div className="bg-[#FFFFFF] rounded-xl p-5 sm:p-8 border border-[#E2E8F0] shadow-xs space-y-6">
           <div className="space-y-2 select-none">
             <span className="text-xs font-mono text-[#2563EB] font-semibold uppercase tracking-wider flex items-center space-x-1.5">
               <Sparkles className="w-4 h-4" />
               <span>AI Technical Interview Room Setup</span>
             </span>
-            <h1 className="text-2xl font-bold text-[#0F172A] tracking-tight font-sans">
+            <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A] tracking-tight font-sans">
               Personalized Adaptive Technical Interviewer
             </h1>
             <p className="text-xs text-[#475569] leading-relaxed max-w-xl font-sans">
@@ -183,7 +183,7 @@ export default function AIInterviewer({
             </p>
           </div>
 
-          <div className="pt-6 border-t border-[#E2E8F0] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 select-none">
+          <div className="pt-6 border-t border-[#E2E8F0] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 select-none">
             <div className="space-y-1.5 w-full sm:w-80">
               <label className="text-xs font-semibold text-[#64748B] block uppercase tracking-wider font-mono">
                 Select Roster Candidate
@@ -195,7 +195,7 @@ export default function AIInterviewer({
               >
                 {candidates.map(c => (
                   <option key={c.id} value={c.id}>
-                    {c.name} — {c.role} ({c.responsibility}% Ownership)
+                    {c.name} — {c.role} ({c.responsibility}% Resp)
                   </option>
                 ))}
               </select>
@@ -203,7 +203,7 @@ export default function AIInterviewer({
 
             <button
               onClick={handleStart}
-              className="flex items-center space-x-2 px-6 py-3 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold text-xs transition-all cursor-pointer shadow-xs font-sans select-none"
+              className="flex items-center justify-center space-x-2 px-6 py-3 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold text-xs transition-all cursor-pointer shadow-xs font-sans select-none w-full sm:w-auto"
             >
               <span>Start AI Interview</span>
               <ArrowRight className="w-4 h-4" />
@@ -214,50 +214,50 @@ export default function AIInterviewer({
     );
   }
 
-  // 3. LIVE TECHNICAL INTERVIEW WORKSPACE — UNIFIED LIGHT THEME
+  // 3. LIVE TECHNICAL INTERVIEW WORKSPACE — RESPONSIVE LAYOUT
   return (
     <div
       onContextMenu={(e) => e.preventDefault()}
       className="space-y-6 max-w-6xl mx-auto animate-fadeIn"
     >
       {/* Top Interview Status Header Card */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-[#FFFFFF] rounded-xl border border-[#E2E8F0] shadow-xs gap-3 select-none">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 bg-[#FFFFFF] rounded-xl border border-[#E2E8F0] shadow-xs gap-3 select-none">
         <div className="flex items-center space-x-3">
-          <div className="w-9 h-9 rounded-xl bg-[#EFF6FF] border border-[#BFDBFE] flex items-center justify-center text-[#2563EB]">
-            <Bot className="w-5 h-5" />
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#EFF6FF] border border-[#BFDBFE] flex items-center justify-center text-[#2563EB] flex-shrink-0">
+            <Bot className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <div>
-            <div className="flex items-center space-x-2">
-              <span className="font-mono font-extrabold text-sm text-[#0F172A] tracking-tight">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+              <span className="font-mono font-extrabold text-xs sm:text-sm text-[#0F172A] tracking-tight">
                 AI INTERVIEWER
               </span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#EFF6FF] text-[#2563EB] font-semibold border border-[#BFDBFE]">
                 RAG GROUNDED
               </span>
             </div>
-            <div className="text-xs text-[#475569] font-sans">
+            <div className="text-xs text-[#475569] font-sans truncate">
               Candidate: <strong className="text-[#0F172A]">{activeCandidate.name}</strong> ({activeCandidate.role})
             </div>
           </div>
         </div>
 
-        <div className="flex items-center space-x-4 text-xs font-mono">
+        <div className="flex items-center justify-between sm:justify-end space-x-4 text-xs font-mono pt-2 sm:pt-0 border-t sm:border-t-0 border-[#E2E8F0]">
           <div className="text-[#64748B]">
             QUESTION <strong className="text-[#0F172A] font-mono text-sm">{questionNumber < 10 ? `0${questionNumber}` : questionNumber}</strong> / <span className="text-[#94A3B8]">08+</span>
           </div>
 
           <span className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-[#DCFCE7] text-[#166534] text-[11px] font-semibold border border-[#BBF7D0]">
-            <span className="w-2 h-2 rounded-full bg-[#16A34A] animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-[#16A34A] animate-pulse flex-shrink-0" />
             <span className="tracking-wider uppercase text-[10px]">LIVE INTERVIEW</span>
           </span>
         </div>
       </div>
 
-      {/* Main Grid: Left Interview Content | Right Sidebar */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {/* Main Responsive Grid (Desktop: 3:1 Split | Mobile/Tablet: Stacked) */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         
-        {/* Left Column (3/4): Technical Question Hero Card & Answer Area */}
-        <div className="md:col-span-3 space-y-6">
+        {/* Main Content Column (Question & Response) */}
+        <div className="lg:col-span-3 space-y-6">
 
           {/* AI Interviewer Technical Question Card (Anti-Copy Protection) */}
           <div
@@ -265,9 +265,9 @@ export default function AIInterviewer({
             onCut={(e) => e.preventDefault()}
             onContextMenu={(e) => e.preventDefault()}
             onDragStart={(e) => e.preventDefault()}
-            className="bg-[#FFFFFF] rounded-xl p-6 border border-[#E2E8F0] shadow-xs space-y-4 select-none cursor-default"
+            className="bg-[#FFFFFF] rounded-xl p-4 sm:p-6 border border-[#E2E8F0] shadow-xs space-y-4 select-none cursor-default"
           >
-            <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3">
+            <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3 flex-wrap gap-2">
               <div className="flex items-center space-x-2">
                 <Cpu className="w-4 h-4 text-[#2563EB]" />
                 <span className="text-xs font-mono font-semibold text-[#0F172A] uppercase tracking-wider">
@@ -276,7 +276,7 @@ export default function AIInterviewer({
               </div>
 
               {currentTopic && (
-                <span className="text-xs font-mono text-[#2563EB] bg-[#EFF6FF] px-3 py-1 rounded-md border border-[#BFDBFE] font-semibold">
+                <span className="text-xs font-mono text-[#2563EB] bg-[#EFF6FF] px-2.5 py-1 rounded-md border border-[#BFDBFE] font-semibold truncate max-w-[200px] sm:max-w-none">
                   {currentTopic}
                 </span>
               )}
@@ -295,10 +295,10 @@ export default function AIInterviewer({
             )}
 
             {/* Question Text or Loading State */}
-            <div className="text-[#0F172A] text-base leading-relaxed font-sans pt-1 min-h-[4rem]">
+            <div className="text-[#0F172A] text-sm sm:text-base leading-relaxed font-sans pt-1 min-h-[3.5rem]">
               {!currentQuestion && isSubmitting ? (
-                <div className="flex items-center space-x-3 text-[#2563EB] font-mono text-sm py-2">
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                <div className="flex items-center space-x-3 text-[#2563EB] font-mono text-xs sm:text-sm py-2">
+                  <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin flex-shrink-0" />
                   <span>Generating your next adaptive question from curriculum context...</span>
                 </div>
               ) : (
@@ -337,7 +337,7 @@ export default function AIInterviewer({
 
             <textarea
               id="user-response-input"
-              rows={6}
+              rows={5}
               value={answerText}
               onChange={(e) => setAnswerText(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -348,7 +348,7 @@ export default function AIInterviewer({
               onDragOver={(e) => e.preventDefault()}
               disabled={isSubmitting || !currentQuestion}
               placeholder="Explain your approach, architecture trade-offs, and production considerations..."
-              className="w-full bg-[#FFFFFF] border border-[#E2E8F0] rounded-xl p-4 text-sm font-mono text-[#0F172A] focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#EFF6FF] leading-relaxed resize-none placeholder:text-[#94A3B8] disabled:opacity-50 transition-colors shadow-xs"
+              className="w-full bg-[#FFFFFF] border border-[#E2E8F0] rounded-xl p-3.5 sm:p-4 text-xs sm:text-sm font-mono text-[#0F172A] focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#EFF6FF] leading-relaxed resize-none placeholder:text-[#94A3B8] disabled:opacity-50 transition-colors shadow-xs"
             />
 
             {/* Error Banner */}
@@ -369,14 +369,14 @@ export default function AIInterviewer({
 
             {/* Action Bar & Submit */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-1 gap-3">
-              <span className="text-[11px] text-[#64748B] font-mono select-none">
+              <span className="text-[11px] text-[#64748B] font-mono select-none hidden sm:inline">
                 Press <kbd className="px-1.5 py-0.5 rounded bg-[#F1F5F9] border border-[#CBD5E1] text-[#0F172A]">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 rounded bg-[#F1F5F9] border border-[#CBD5E1] text-[#0F172A]">Enter</kbd> to submit
               </span>
 
               <button
                 onClick={handleSubmit}
                 disabled={!answerText.trim() || isSubmitting || !currentQuestion}
-                className="flex items-center justify-center space-x-2 px-7 py-3 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold text-xs transition-all disabled:opacity-40 cursor-pointer shadow-xs font-sans select-none"
+                className="flex items-center justify-center space-x-2 px-7 py-3 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold text-xs transition-all disabled:opacity-40 cursor-pointer shadow-xs font-sans select-none w-full sm:w-auto"
               >
                 {isSubmitting ? (
                   <>
@@ -395,8 +395,8 @@ export default function AIInterviewer({
 
         </div>
 
-        {/* Right Sidebar (1/4): Adaptive Signal & Curriculum Days Progress */}
-        <div className="md:col-span-1 space-y-6 select-none">
+        {/* Right Sidebar (Desktop) / Stacked Section (Mobile/Tablet) */}
+        <div className="lg:col-span-1 space-y-6 select-none">
           
           {/* Adaptive Signal Panel */}
           {adaptiveSignal && (
@@ -404,12 +404,12 @@ export default function AIInterviewer({
           )}
 
           {/* Question Counter Card */}
-          <div className="bg-[#FFFFFF] rounded-xl border border-[#E2E8F0] p-5 shadow-xs space-y-3">
+          <div className="bg-[#FFFFFF] rounded-xl border border-[#E2E8F0] p-4 sm:p-5 shadow-xs space-y-3">
             <div className="text-xs font-mono font-semibold text-[#0F172A] uppercase tracking-wider border-b border-[#E2E8F0] pb-2">
               Question Progress
             </div>
 
-            <div className="space-y-1.5 font-mono">
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-1 gap-1.5 font-mono">
               {[1, 2, 3, 4, 5, 6, 7, 8].map((qNum) => {
                 const isDone = qNum < questionNumber;
                 const isCurrent = qNum === questionNumber;
@@ -417,7 +417,7 @@ export default function AIInterviewer({
                 return (
                   <div
                     key={qNum}
-                    className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-mono transition-colors ${
+                    className={`flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-mono transition-colors ${
                       isCurrent
                         ? 'bg-[#EFF6FF] text-[#2563EB] font-bold border border-[#BFDBFE]'
                         : isDone
@@ -425,11 +425,11 @@ export default function AIInterviewer({
                         : 'text-[#94A3B8]'
                     }`}
                   >
-                    <span className="flex items-center space-x-2">
+                    <span className="flex items-center space-x-1.5 truncate">
                       <span>{isDone ? '✓' : isCurrent ? '●' : '○'}</span>
-                      <span>Question 0{qNum}</span>
+                      <span className="truncate">Q0{qNum}</span>
                     </span>
-                    {isCurrent && <span className="text-[10px] uppercase font-bold text-[#2563EB]">ACTIVE</span>}
+                    {isCurrent && <span className="text-[9px] uppercase font-bold text-[#2563EB] hidden lg:inline">ACTIVE</span>}
                   </div>
                 );
               })}
