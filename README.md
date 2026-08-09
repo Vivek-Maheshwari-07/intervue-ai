@@ -147,6 +147,37 @@ npm run build
     "strengths": ["Solid competency in Database Design"],
     "gaps": ["Needs improvement in distributed locking edge cases"],
     "next": ["Review specific curriculum modules for identified gaps."]
-  }
-}
-```
+
+---
+
+## Production Deployment Guide (100% Free Architecture)
+
+### Hosting Architecture
+
+- **Frontend**: Hosted on **Vercel** (`https://<your-project>.vercel.app`)
+- **Backend**: Hosted on **Render** Python Web Service (`https://<your-backend>.onrender.com`)
+- **RAG Subsystem**: ChromaDB + SentenceTransformers MiniLM running inside Render backend container
+- **Session Persistence**: SQLite database running on Render backend instance
+- **AI Model / Ollama**: Connected via `OLLAMA_BASE_URL` (Remote GPU Ollama server, free Modal credits, or built-in deterministic engine fallback)
+
+### Step 1: Deploy Backend to Render (Free Tier)
+
+1. Log into [Render Dashboard](https://dashboard.render.com).
+2. Click **New +** -> **Blueprint** or **Web Service**.
+3. Connect your GitHub repository: `https://github.com/Vivek-Maheshwari-07/intervue-ai.git`.
+4. Render automatically detects `render.yaml`:
+   - **Build Command**: `pip install -r backend/requirements.txt`
+   - **Start Command**: `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
+5. Add Environment Variables in Render:
+   - `CORS_ORIGINS`: `https://<your-vercel-app>.vercel.app,*`
+   - `OLLAMA_BASE_URL`: `<your-remote-ollama-url-or-leave-default>`
+6. Deploy service. Once live, note your backend URL (e.g. `https://intervue-ai-backend.onrender.com`).
+
+### Step 2: Deploy Frontend to Vercel (Free Tier)
+
+1. Log into [Vercel Dashboard](https://vercel.com).
+2. Click **Add New Project** -> Import `intervue-ai` from GitHub.
+3. Set Environment Variable:
+   - `VITE_API_URL`: `https://intervue-ai-backend.onrender.com`
+4. Click **Deploy**. Vercel will build and assign your live URL (e.g., `https://intervue-ai.vercel.app`).
+
