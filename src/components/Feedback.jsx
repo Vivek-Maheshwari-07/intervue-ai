@@ -8,6 +8,7 @@ import {
   BookOpen,
   Target
 } from 'lucide-react';
+import AIUsageLogSection from './AIUsageLogSection';
 
 export default function Feedback({ feedback, questionCount, topicsCovered, coveredTopics, coveredDays }) {
   const { summary = '', strengths = [], gaps = [], next = [], average_score, averageScore } = feedback || {};
@@ -49,69 +50,45 @@ export default function Feedback({ feedback, questionCount, topicsCovered, cover
             <span className="text-3xl font-extrabold text-[#1E40AF]">{overallScore} <span className="text-sm font-normal text-[#64748B]">/ 100</span></span>
           </div>
         </div>
-
-        {/* Covered Topics Badges */}
-        {coveredTopics && coveredTopics.length > 0 && (
-          <div className="space-y-1.5 pt-2">
-            <div className="text-[11px] font-mono text-[#64748B] uppercase tracking-wider">
-              Curriculum Topics Evaluated ({coveredTopics.length})
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {coveredTopics.map((topic, i) => (
-                <span
-                  key={i}
-                  className="px-3 py-1 rounded-lg bg-[#F8FAFC] text-[#0F172A] text-xs font-medium border border-[#E2E8F0]"
-                >
-                  ✓ {topic}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Competency Performance Breakdown */}
-      <div className="space-y-3 py-2 border-b border-[#E2E8F0]">
+      {/* Summary Narrative */}
+      <div className="space-y-2">
         <div className="text-xs font-mono font-semibold text-[#64748B] uppercase tracking-wider">
-          Competency Performance Breakdown
+          Evaluation Summary & Assessment Overview
         </div>
+        <p className="text-xs text-[#0F172A] leading-relaxed bg-[#F8FAFC] p-4 rounded-xl border border-[#E2E8F0]">
+          {summary || 'Candidate demonstrated competent understanding of core software engineering and AI system design principles.'}
+        </p>
+      </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-          {skillScores.map((skill, i) => (
-            <div key={i} className="p-3.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-[#0F172A]">{skill.label}</span>
-                <span className="font-mono font-bold text-[#2563EB]">{skill.score}%</span>
+      {/* Competency Mastery Breakdown */}
+      <div className="space-y-3">
+        <div className="text-xs font-mono font-semibold text-[#64748B] uppercase tracking-wider">
+          Technical Skill Scores
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {skillScores.map((sk, idx) => (
+            <div key={idx} className="p-3.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-1.5">
+              <div className="flex items-center justify-between text-xs font-semibold text-[#0F172A]">
+                <span>{sk.label}</span>
+                <span className="font-mono text-[#2563EB]">{sk.score}%</span>
               </div>
-              <div className="w-full h-2 bg-[#E2E8F0] rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-[#2563EB]"
-                  style={{ width: `${skill.score}%` }}
-                />
+              <div className="w-full h-1.5 bg-[#E2E8F0] rounded-full overflow-hidden">
+                <div className="h-full bg-[#2563EB]" style={{ width: `${sk.score}%` }} />
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Summary */}
-      {summary && (
-        <div className="space-y-2 py-2 border-b border-[#E2E8F0]">
-          <div className="text-xs font-mono font-semibold text-[#64748B] uppercase tracking-wider">
-            Evaluation Summary
-          </div>
-          <p className="text-xs text-[#475569] leading-relaxed">
-            {summary}
-          </p>
-        </div>
-      )}
-
-      {/* Strengths & Areas to Improve */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2 border-b border-[#E2E8F0]">
+      {/* Strengths & Gaps Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
         {/* Strengths */}
-        <div className="space-y-2">
-          <div className="text-xs font-mono text-[#16A34A] uppercase tracking-wider font-semibold">
-            Validated Technical Strengths
+        <div className="space-y-3">
+          <div className="flex items-center space-x-2 text-xs font-mono font-semibold text-[#16A34A] uppercase tracking-wider">
+            <CheckCircle2 className="w-4 h-4" />
+            <span>Demonstrated Strengths ({strengths.length})</span>
           </div>
 
           {strengths.length > 0 ? (
@@ -128,10 +105,11 @@ export default function Feedback({ feedback, questionCount, topicsCovered, cover
           )}
         </div>
 
-        {/* Gaps */}
-        <div className="space-y-2">
-          <div className="text-xs font-mono text-[#DC2626] uppercase tracking-wider font-semibold">
-            Areas to Improve
+        {/* Technical Gaps */}
+        <div className="space-y-3">
+          <div className="flex items-center space-x-2 text-xs font-mono font-semibold text-[#DC2626] uppercase tracking-wider">
+            <AlertTriangle className="w-4 h-4" />
+            <span>Identified Skill Gaps ({gaps.length})</span>
           </div>
 
           {gaps.length > 0 ? (
@@ -171,6 +149,9 @@ export default function Feedback({ feedback, questionCount, topicsCovered, cover
           <p className="text-xs text-[#64748B] italic">No specific next steps recommended.</p>
         )}
       </div>
+
+      {/* Verified AI Usage Documentation Link */}
+      <AIUsageLogSection className="mt-4" />
 
       {/* Footer Attribution */}
       <div className="pt-4 border-t border-[#E2E8F0] flex items-center justify-between text-xs text-[#64748B]">

@@ -8,6 +8,7 @@ import {
   Award,
   Sparkles
 } from 'lucide-react';
+import AIUsageLogSection from './AIUsageLogSection';
 
 const CURRICULUM_FOCUS_AREAS = [
   { name: 'RAG Architecture & Document Retrieval', day: 'Day 12' },
@@ -71,6 +72,9 @@ export default function CandidateDetails({ candidates, onStartInterview }) {
           Each candidate's profile, learning missions, and technical focus areas ground the adaptive interview agent.
         </p>
       </div>
+
+      {/* Verified AI-Usage Log URL Section */}
+      <AIUsageLogSection />
 
       {exportMessage && (
         <div className="p-3 rounded-lg bg-[#DCFCE7] border border-[#BBF7D0] text-[#166534] text-xs font-medium flex items-center space-x-2 select-none">
