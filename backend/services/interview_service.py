@@ -175,4 +175,5 @@ async def process_interview_turn(
         topicsCovered=len(session.get("covered_topics", [])),
         coveredTopics=session.get("covered_topics", []),
         conversationHistory=session.get("conversation_history", []),
+        adaptiveSignal=eval_result.get("adaptive_signal"),
     )

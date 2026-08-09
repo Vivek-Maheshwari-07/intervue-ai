@@ -1,27 +1,51 @@
 import urllib.request
 import json
+import time
+import sys
+import os
+
+# Ensure project root & backend are in sys.path
+ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
+BACKEND_DIR = os.path.join(ROOT_DIR, "backend")
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+if BACKEND_DIR not in sys.path:
+    sys.path.insert(0, BACKEND_DIR)
+
 
 def run_e2e_test():
-    print("=== 1. TESTING BACKEND HEALTH ===")
-    req_be = urllib.request.urlopen("http://127.0.0.1:8000/health")
-    print("Backend Health:", req_be.read().decode())
+    print("=== 1. TESTING BACKEND INTEGRATION ===")
+    
+    use_http = False
+    try:
+        req_be = urllib.request.urlopen("http://127.0.0.1:8000/health", timeout=1)
+        print("Live HTTP Server Health:", req_be.read().decode())
+        use_http = True
+    except Exception:
+        print("Live HTTP server on port 8000 not running — using FastAPI TestClient.")
+        from fastapi.testclient import TestClient
+        from backend.main import app
+        client = TestClient(app)
 
-    session_id = "live-e2e-demo-200"
+    session_id = f"live-e2e-demo-{int(time.time())}"
     candidate_id = "person-3"
 
     print("\n=== 2. STARTING INTERVIEW (Turn 1) ===")
-    payload1 = json.dumps({
+    payload1 = {
         "sessionId": session_id,
         "candidateId": candidate_id,
         "answer": ""
-    }).encode()
+    }
     
-    req1 = urllib.request.Request(
-        "http://127.0.0.1:8000/api/interview",
-        data=payload1,
-        headers={"Content-Type": "application/json"}
-    )
-    resp1 = json.loads(urllib.request.urlopen(req1).read().decode())
+    if use_http:
+        req1 = urllib.request.Request(
+            "http://127.0.0.1:8000/api/interview",
+            data=json.dumps(payload1).encode(),
+            headers={"Content-Type": "application/json"}
+        )
+        resp1 = json.loads(urllib.request.urlopen(req1).read().decode())
+    else:
+        resp1 = client.post("/api/interview", json=payload1).json()
 
     print(f"Status: {resp1['status']}")
     print(f"Question 1: {resp1['question']}")
@@ -42,18 +66,21 @@ def run_e2e_test():
 
     last_resp = resp1
     for i, ans in enumerate(sample_answers, start=1):
-        payload = json.dumps({
+        payload = {
             "sessionId": session_id,
             "candidateId": candidate_id,
             "answer": ans
-        }).encode()
+        }
 
-        req = urllib.request.Request(
-            "http://127.0.0.1:8000/api/interview",
-            data=payload,
-            headers={"Content-Type": "application/json"}
-        )
-        last_resp = json.loads(urllib.request.urlopen(req).read().decode())
+        if use_http:
+            req = urllib.request.Request(
+                "http://127.0.0.1:8000/api/interview",
+                data=json.dumps(payload).encode(),
+                headers={"Content-Type": "application/json"}
+            )
+            last_resp = json.loads(urllib.request.urlopen(req).read().decode())
+        else:
+            last_resp = client.post("/api/interview", json=payload).json()
 
         q_num = last_resp.get("questionNumber", "N/A")
         top_cnt = last_resp.get("topicsCovered", "N/A")

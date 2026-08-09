@@ -17,6 +17,16 @@ class InterviewRequest(BaseModel):
 
 # ── Response – ongoing ───────────────────────────────────────────────────────
 
+class AdaptiveSignal(BaseModel):
+    """Evaluation signal metadata returned after answer evaluation."""
+    action: str = Field(..., description="HARDER, CLARIFY, MODERATE, NEW_TOPIC")
+    quality: str = Field(..., description="strong, moderate, weak")
+    score: float = Field(..., description="Evaluation score 0-10")
+    topic: str = Field(..., description="Topic of the question evaluated")
+    difficultyDelta: int = Field(default=0, description="+1, 0, -1")
+    reason: str = Field(default="", description="Safe user-facing summary of why action was taken")
+
+
 class InterviewOngoingResponse(BaseModel):
     """Returned while the interview is still in progress."""
 
@@ -28,6 +38,7 @@ class InterviewOngoingResponse(BaseModel):
     topicsCovered: int
     coveredTopics: list[str] = []
     conversationHistory: list[dict] = []
+    adaptiveSignal: AdaptiveSignal | None = None
 
 
 # ── Response – completed ─────────────────────────────────────────────────────

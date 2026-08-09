@@ -20,6 +20,9 @@ export function useInterview() {
   const [coveredTopics, setCoveredTopics] = useState([]);
   const [conversationHistory, setConversationHistory] = useState([]);
 
+  // Adaptive Signal
+  const [adaptiveSignal, setAdaptiveSignal] = useState(null);
+
   // Final Assessment Feedback
   const [feedback, setFeedback] = useState(null);
   const [lastSubmittedAnswer, setLastSubmittedAnswer] = useState('');
@@ -38,6 +41,7 @@ export function useInterview() {
     setStatus('starting');
     setError(null);
     setFeedback(null);
+    setAdaptiveSignal(null);
 
     try {
       const data = await startInterview(newSessionId, trimmedId);
@@ -71,6 +75,10 @@ export function useInterview() {
 
     try {
       const data = await submitAnswer(sessionId, candidateId, trimmed);
+
+      if (data.adaptiveSignal) {
+        setAdaptiveSignal(data.adaptiveSignal);
+      }
 
       if (data.status === 'completed') {
         setFeedback(data.feedback || {});
@@ -121,6 +129,7 @@ export function useInterview() {
     setCoveredTopics([]);
     setConversationHistory([]);
     setFeedback(null);
+    setAdaptiveSignal(null);
     setLastSubmittedAnswer('');
   }, []);
 
@@ -136,6 +145,7 @@ export function useInterview() {
     topicsCovered,
     coveredTopics,
     conversationHistory,
+    adaptiveSignal,
     feedback,
     isSubmitting: status === 'submitting' || status === 'starting',
     startSession,

@@ -82,6 +82,46 @@ def retrieve_curriculum_text(query: str) -> str:
         return f"Standard curriculum context reference for: {query}"
 
 
+# ── Candidate Loader helper ──────────────────────────────────────────────────
+
+_candidate_loader_instance = None
+_candidate_loader_initialized = False
+
+
+def _get_candidate_loader():
+    """Lazy initialize CandidateLoader from data/candidates.json."""
+    global _candidate_loader_instance, _candidate_loader_initialized
+    if not _candidate_loader_initialized:
+        _candidate_loader_initialized = True
+        try:
+            from src.candidate_loader import CandidateLoader
+            json_path = os.path.join(ROOT_DIR, "data", "candidates.json")
+            if os.path.exists(json_path):
+                _candidate_loader_instance = CandidateLoader(json_path)
+        except Exception as exc:
+            logger.warning("Could not initialize CandidateLoader: %s", exc)
+            _candidate_loader_instance = None
+    return _candidate_loader_instance
+
+
+def get_candidate_profile(candidate_id: str) -> dict:
+    """Retrieve structured candidate profile or return basic fallback dict."""
+    loader = _get_candidate_loader()
+    if loader:
+        cand_record = loader.get_candidate(candidate_id)
+        if cand_record and isinstance(cand_record, dict):
+            member = cand_record.get("member", {})
+            return {
+                "candidate_id": candidate_id,
+                "name": member.get("name", candidate_id),
+                "jobRole": member.get("jobRole", "AI Engineering Specialist"),
+                "yearsExperience": member.get("yearsExperience", 5),
+                "missions": cand_record.get("missions", []),
+                "signals": cand_record.get("signals", {}),
+            }
+    return {"candidate_id": candidate_id, "jobRole": "Software Engineer"}
+
+
 # ── Session State <-> InterviewAgent Bridge ──────────────────────────────────
 
 def _build_agent(session_state: dict) -> InterviewAgent:
@@ -89,7 +129,7 @@ def _build_agent(session_state: dict) -> InterviewAgent:
     Reconstruct an InterviewAgent from an existing SQLite session dict.
     """
     candidate_id = session_state.get("candidate_id", "")
-    candidate_info = {"candidate_id": candidate_id} if candidate_id else session_state.get("candidate_info", {})
+    candidate_info = get_candidate_profile(candidate_id) if candidate_id else session_state.get("candidate_info", {})
 
     state = InterviewState(
         session_id=session_state.get("session_id", "default_session"),
@@ -129,13 +169,14 @@ async def generate_question(
 
     Returns: {"question": str, "topic": str}
     """
+    cand_profile = get_candidate_profile(candidate_id)
     agent = _build_agent(session_state)
     q_count = session_state.get("question_count", 0)
     covered = session_state.get("covered_topics", [])
 
     # If new session (question_count == 0 and empty covered_topics), start interview
     if q_count == 0 and not covered:
-        result = agent.start_interview(candidate_info={"candidate_id": candidate_id})
+        result = agent.start_interview(candidate_info=cand_profile)
         return {
             "question": result["question"],
             "topic": result["topic"],
@@ -186,7 +227,7 @@ async def evaluate_answer(
     """
     Evaluate the candidate's answer using InterviewAgent and evaluator logic.
 
-    Returns: {"score": float, "evaluation": str}
+    Returns: {"score": float, "evaluation": str, "adaptive_signal": dict}
     """
     agent = _build_agent(session_state)
     topic = session_state.get("current_topic") or "General Technical"
@@ -203,9 +244,44 @@ async def evaluate_answer(
     if not eval_text:
         eval_text = "Answer evaluated."
 
+    # Compute planner action to build adaptive signal metadata
+    covered = session_state.get("covered_topics", [])
+    history = session_state.get("conversation_history", [])
+    questions_on_topic = sum(1 for h in history if h.get("topic") == topic) or 1
+
+    action = agent.planner.plan_next_action(
+        evaluation=evaluation,
+        current_topic=topic,
+        current_day=session_state.get("current_day") or "Day 1",
+        covered_topics=covered,
+        covered_days=session_state.get("covered_days", []),
+        questions_on_current_topic=questions_on_topic,
+        total_questions=session_state.get("question_count", 0),
+        required_unique_units=4,
+    )
+
+    # Safe user-facing reason (NEVER expose internal chain of thought)
+    reason_map = {
+        ACTION_HARDER: "Strong technical answer demonstrated — increasing difficulty depth.",
+        ACTION_CLARIFY: "Knowledge gap detected — tailoring clarification question.",
+        ACTION_MODERATE: "Solid core explanation — maintaining current difficulty level.",
+        ACTION_NEW_TOPIC: f"Topic depth satisfied — transitioning to {action.target_topic or 'next curriculum topic'}.",
+    }
+    safe_reason = reason_map.get(action.action_type, "Answer evaluated and adaptive path updated.")
+
+    adaptive_signal = {
+        "action": action.action_type,
+        "quality": evaluation.quality,
+        "score": evaluation.score,
+        "topic": topic,
+        "difficultyDelta": action.difficulty_delta,
+        "reason": safe_reason,
+    }
+
     return {
         "score": evaluation.score,
         "evaluation": eval_text,
+        "adaptive_signal": adaptive_signal,
     }
 
 
@@ -217,3 +293,4 @@ async def generate_feedback(session_state: dict) -> dict:
     """
     agent = _build_agent(session_state)
     return agent.generate_feedback()
+

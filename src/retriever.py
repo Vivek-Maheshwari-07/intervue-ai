@@ -72,10 +72,16 @@ class CurriculumRetriever:
                 name=self.collection_name,
                 embedding_function=embedding_fn,
             )
-        except Exception as exc:
-            raise RuntimeError(
-                f"Failed to access ChromaDB collection '{self.collection_name}': {exc}"
-            ) from exc
+        except Exception:
+            # Auto-ingest curriculum data if collection is not yet populated
+            try:
+                from src.curriculum_parser import CurriculumParser
+                parser = CurriculumParser(vector_store=self.vector_store)
+                collection = parser.ingest(collection_name=self.collection_name)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"Failed to access or auto-ingest ChromaDB collection '{self.collection_name}': {exc}"
+                ) from exc
 
         raw_results = collection.query(
             query_texts=[query],

@@ -1,39 +1,31 @@
 import React, { useState } from 'react';
 import Navbar from './components/Navbar';
-import MatrixDashboard from './components/MatrixDashboard';
 import AIInterviewer from './components/AIInterviewer';
 import CandidateDetails from './components/CandidateDetails';
 import { INITIAL_CANDIDATES } from './data/mockData';
 import { useInterview } from './hooks/useInterview';
 
 export default function App() {
-  // Default home view is candidate overview
+  // Default home view is candidate roster overview
   const [activeTab, setActiveTab] = useState('candidates');
-  const [candidates, setCandidates] = useState(INITIAL_CANDIDATES);
-  const [selectedDifficulty, setSelectedDifficulty] = useState(6);
+  const [candidates] = useState(INITIAL_CANDIDATES);
 
-  // Centralized Single Canonical Interview State Hook
+  // Single Canonical Interview State Hook
   const interviewState = useInterview();
 
-  // Compute average reliability score
-  const totalReliability = Math.round(
-    candidates.reduce((acc, curr) => acc + curr.responsibility, 0) / candidates.length
-  );
-
-  // Handler for Start Interview trigger from Candidate Overview
+  // Handler for Start AI Interview trigger from Candidate Overview
   const handleStartInterviewFromProfile = (candidateId) => {
     interviewState.startSession(candidateId);
     setActiveTab('interviewer');
   };
 
   return (
-    <div className="min-h-screen bg-[#F7F6F2] text-[#1C1C1A] font-sans flex flex-col selection:bg-[#EEF0FF] selection:text-[#4F46E5]">
+    <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] font-sans flex flex-col selection:bg-[#EFF6FF] selection:text-[#2563EB]">
       {/* Top Navigation */}
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         candidatesCount={candidates.length}
-        totalReliability={totalReliability}
       />
 
       {/* Main Container */}
@@ -52,26 +44,17 @@ export default function App() {
             onStartInterview={handleStartInterviewFromProfile}
           />
         )}
-
-        {activeTab === 'matrix' && (
-          <MatrixDashboard
-            candidates={candidates}
-            setCandidates={setCandidates}
-            selectedDifficulty={selectedDifficulty}
-            setSelectedDifficulty={setSelectedDifficulty}
-          />
-        )}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-[#E4E2DB] bg-[#F1F0EB] py-6 text-center text-xs text-[#686862]">
+      {/* Modern Light Footer */}
+      <footer className="border-t border-[#E2E8F0] bg-[#FFFFFF] py-6 text-xs text-[#64748B]">
         <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center space-x-2">
-            <span className="font-semibold text-[#1C1C1A]">INTERVUE AI</span>
-            <span className="text-[#96968F]">— Personalized AI Technical Interviewer</span>
+            <span className="font-extrabold text-[#0F172A] font-mono tracking-tight">INTERVUE <span className="text-[#2563EB]">AI</span></span>
+            <span className="text-[#94A3B8]">— Adaptive Technical Interviewer</span>
           </div>
-          <div className="text-[#96968F]">
-            <span>Engineered by Vivek Maheshwari, Aayush Malhotra, Manav Lathiya</span>
+          <div className="text-[#64748B]">
+            <span>Engineered by <strong>Vivek Maheshwari, Aayush Malhotra, Manav Lathiya</strong></span>
           </div>
         </div>
       </footer>
