@@ -9,6 +9,7 @@ export function useInterview() {
   const [sessionId, setSessionId] = useState('');
   const [candidateId, setCandidateId] = useState('');
   const [status, setStatus] = useState('idle'); // 'idle' | 'starting' | 'active' | 'submitting' | 'completed' | 'error'
+  const [loadingMessage, setLoadingMessage] = useState('');
   const [error, setError] = useState(null);
 
   // Question & Session details
@@ -18,6 +19,7 @@ export function useInterview() {
   const [totalQuestions, setTotalQuestions] = useState(8);
   const [topicsCovered, setTopicsCovered] = useState(0);
   const [coveredTopics, setCoveredTopics] = useState([]);
+  const [coveredDays, setCoveredDays] = useState([]);
   const [conversationHistory, setConversationHistory] = useState([]);
 
   // Adaptive Signal
@@ -39,6 +41,7 @@ export function useInterview() {
     setCandidateId(trimmedId);
     setSessionId(newSessionId);
     setStatus('starting');
+    setLoadingMessage('Starting your personalized AI technical interview...');
     setError(null);
     setFeedback(null);
     setAdaptiveSignal(null);
@@ -46,21 +49,25 @@ export function useInterview() {
     try {
       const data = await startInterview(newSessionId, trimmedId);
 
-      setCurrentQuestion(data.question || '');
-      // Infer topic from response or history
+      const firstQ = data.reply || data.question || '';
+      setCurrentQuestion(firstQ);
+
       const hist = data.conversationHistory || [];
       const lastTurn = hist.length > 0 ? hist[hist.length - 1] : null;
-      setCurrentTopic(lastTurn?.topic || 'General Technical');
+      setCurrentTopic(data.topic || lastTurn?.topic || 'General Technical');
 
-      setQuestionNumber(data.questionNumber || 1);
+      setQuestionNumber(data.questionNumber || data.question_count || 1);
       setTotalQuestions(data.totalQuestions || 8);
-      setTopicsCovered(data.topicsCovered || 0);
-      setCoveredTopics(data.coveredTopics || []);
+      setTopicsCovered(data.topicsCovered || data.covered_topics_count || 0);
+      setCoveredTopics(data.coveredTopics || data.covered_topics || []);
+      setCoveredDays(data.coveredDays || data.covered_days || []);
       setConversationHistory(hist);
       setStatus('active');
     } catch (err) {
       setError(err.message || 'Could not initiate session with AI Interviewer.');
       setStatus('error');
+    } finally {
+      setLoadingMessage('');
     }
   }, []);
 
@@ -71,6 +78,7 @@ export function useInterview() {
 
     setLastSubmittedAnswer(trimmed);
     setStatus('submitting');
+    setLoadingMessage('Analyzing your response & generating adaptive follow-up...');
     setError(null);
 
     try {
@@ -80,31 +88,38 @@ export function useInterview() {
         setAdaptiveSignal(data.adaptiveSignal);
       }
 
-      if (data.status === 'completed') {
+      const isCompleted = data.done === true || data.status === 'completed';
+
+      if (isCompleted) {
         setFeedback(data.feedback || {});
-        setQuestionNumber(data.questionNumber || questionNumber);
+        setQuestionNumber(data.questionNumber || data.question_count || questionNumber);
         setTopicsCovered(data.topicsCovered || topicsCovered);
         setCoveredTopics(data.coveredTopics || coveredTopics);
+        setCoveredDays(data.coveredDays || data.covered_days || coveredDays);
         setConversationHistory(data.conversationHistory || conversationHistory);
         setStatus('completed');
       } else {
-        setCurrentQuestion(data.question || '');
+        const nextQ = data.reply || data.next_question || data.question || '';
+        setCurrentQuestion(nextQ);
         const hist = data.conversationHistory || [];
         const lastTurn = hist.length > 0 ? hist[hist.length - 1] : null;
-        setCurrentTopic(lastTurn?.topic || 'General Technical');
+        setCurrentTopic(data.topic || lastTurn?.topic || currentTopic || 'General Technical');
 
-        setQuestionNumber(data.questionNumber || questionNumber + 1);
+        setQuestionNumber(data.questionNumber || data.question_count || questionNumber + 1);
         setTotalQuestions(data.totalQuestions || 8);
-        setTopicsCovered(data.topicsCovered || topicsCovered);
-        setCoveredTopics(data.coveredTopics || coveredTopics);
+        setTopicsCovered(data.topicsCovered || data.covered_topics_count || topicsCovered);
+        setCoveredTopics(data.coveredTopics || data.covered_topics || coveredTopics);
+        setCoveredDays(data.coveredDays || data.covered_days || coveredDays);
         setConversationHistory(hist);
         setStatus('active');
       }
     } catch (err) {
       setError(err.message || 'Failed to evaluate response. Please check backend connection.');
       setStatus('error');
+    } finally {
+      setLoadingMessage('');
     }
-  }, [sessionId, candidateId, questionNumber, totalQuestions, topicsCovered, coveredTopics, conversationHistory]);
+  }, [sessionId, candidateId, questionNumber, totalQuestions, topicsCovered, coveredTopics, coveredDays, conversationHistory, currentTopic]);
 
   // Retry last failed action
   const retry = useCallback(async () => {
@@ -120,6 +135,7 @@ export function useInterview() {
     setSessionId('');
     setCandidateId('');
     setStatus('idle');
+    setLoadingMessage('');
     setError(null);
     setCurrentQuestion('');
     setCurrentTopic('');
@@ -127,6 +143,7 @@ export function useInterview() {
     setTotalQuestions(8);
     setTopicsCovered(0);
     setCoveredTopics([]);
+    setCoveredDays([]);
     setConversationHistory([]);
     setFeedback(null);
     setAdaptiveSignal(null);
@@ -137,6 +154,7 @@ export function useInterview() {
     sessionId,
     candidateId,
     status,
+    loadingMessage,
     error,
     currentQuestion,
     currentTopic,
@@ -144,6 +162,7 @@ export function useInterview() {
     totalQuestions,
     topicsCovered,
     coveredTopics,
+    coveredDays,
     conversationHistory,
     adaptiveSignal,
     feedback,

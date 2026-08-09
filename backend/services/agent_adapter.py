@@ -10,6 +10,7 @@ Connects:
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import sys
@@ -22,9 +23,9 @@ if ROOT_DIR not in sys.path:
 
 from agent.interview_agent import InterviewAgent
 from agent.state import InterviewState, STATUS_IN_PROGRESS, STATUS_COMPLETED
-from agent.llm_client import OllamaLLMClient, MockLLMClient, OllamaConnectionError
-from agent.evaluator import evaluate_answer as agent_evaluate_answer, map_score_to_quality, AnswerEvaluation
-from agent.question_planner import PlannerAction, ACTION_NEW_TOPIC, ACTION_HARDER, ACTION_CLARIFY, ACTION_MODERATE
+from agent.llm_client import OllamaLLMClient, MockLLMClient
+from agent.evaluator import evaluate_answer as agent_evaluate_answer, AnswerEvaluation, map_score_to_quality
+from agent.question_planner import ACTION_NEW_TOPIC, ACTION_HARDER, ACTION_CLARIFY, ACTION_MODERATE
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ _llm_client_instance: Optional[Any] = None
 
 
 def get_llm_client():
-    """Retrieve or create the LLM client instance (OllamaLLMClient with fallback capability)."""
+    """Retrieve or create the LLM client instance."""
     global _llm_client_instance
     if _llm_client_instance is None:
         timeout = int(os.environ.get("OLLAMA_TIMEOUT", "3"))
@@ -61,25 +62,42 @@ def _get_retriever():
     return _retriever_instance
 
 
-def retrieve_curriculum_text(query: str) -> str:
+def retrieve_curriculum_details(query: str) -> dict:
     """
-    Search ChromaDB vector store using CurriculumRetriever and return formatted text.
-    Handles RAG failures gracefully.
+    Search ChromaDB vector store using CurriculumRetriever and return text + day metadata.
     """
     retriever = _get_retriever()
     if not retriever:
-        return f"Standard curriculum context reference for: {query}"
+        return {"text": f"Standard curriculum context reference for: {query}", "day": None, "title": None}
     try:
         results = retriever.search_curriculum(query, top_k=3)
         if not results:
-            return f"Standard curriculum context reference for: {query}"
+            return {"text": f"Standard curriculum context reference for: {query}", "day": None, "title": None}
         docs = [r.get("document", "") for r in results if isinstance(r, dict) and r.get("document")]
-        if docs:
-            return "\n\n".join(docs)
-        return f"Standard curriculum context reference for: {query}"
+        top_day = None
+        top_title = None
+        for r in results:
+            if isinstance(r, dict):
+                meta = r.get("metadata", {})
+                if top_day is None and meta.get("day") is not None:
+                    top_day = f"Day {meta['day']}"
+                    top_title = meta.get("title")
+        return {
+            "text": "\n\n".join(docs) if docs else f"Standard curriculum context reference for: {query}",
+            "day": top_day,
+            "title": top_title,
+        }
     except Exception as exc:
         logger.warning("RAG retrieval error for query '%s': %s", query, exc)
-        return f"Standard curriculum context reference for: {query}"
+        return {"text": f"Standard curriculum context reference for: {query}", "day": None, "title": None}
+
+
+def retrieve_curriculum_text(query: str) -> str:
+    """
+    Search ChromaDB vector store using CurriculumRetriever and return formatted text.
+    """
+    details = retrieve_curriculum_details(query)
+    return details.get("text", f"Standard curriculum context reference for: {query}")
 
 
 # ── Candidate Loader helper ──────────────────────────────────────────────────
@@ -104,8 +122,12 @@ def _get_candidate_loader():
     return _candidate_loader_instance
 
 
-def get_candidate_profile(candidate_id: str) -> dict:
-    """Retrieve structured candidate profile or return basic fallback dict."""
+def get_candidate_profile(candidate_info_or_id: Any) -> dict:
+    """Retrieve structured candidate profile or return basic dict."""
+    if isinstance(candidate_info_or_id, dict) and candidate_info_or_id:
+        return candidate_info_or_id
+
+    candidate_id = str(candidate_info_or_id) if candidate_info_or_id else "candidate-1"
     loader = _get_candidate_loader()
     if loader:
         cand_record = loader.get_candidate(candidate_id)
@@ -124,9 +146,10 @@ def get_candidate_profile(candidate_id: str) -> dict:
 
 # ── Session State <-> InterviewAgent Bridge ──────────────────────────────────
 
-def _build_agent(session_state: dict) -> InterviewAgent:
+def build_agent(session_state: dict) -> InterviewAgent:
     """
-    Reconstruct an InterviewAgent from an existing SQLite session dict.
+    Reconstruct an InterviewAgent instance strictly bound to the SQLite session dict.
+    InterviewAgent is the SINGLE SOURCE OF TRUTH for workflow & state.
     """
     candidate_id = session_state.get("candidate_id", "")
     candidate_info = get_candidate_profile(candidate_id) if candidate_id else session_state.get("candidate_info", {})
@@ -145,12 +168,17 @@ def _build_agent(session_state: dict) -> InterviewAgent:
         status=session_state.get("status", STATUS_IN_PROGRESS),
     )
 
+    current_t = session_state.get("current_topic")
+    history = session_state.get("conversation_history", [])
+    q_on_topic = sum(1 for h in history if isinstance(h, dict) and h.get("topic") == current_t) or 1
+
     llm = get_llm_client()
     agent = InterviewAgent(
         state=state,
-        curriculum_retriever=retrieve_curriculum_text,
+        curriculum_retriever=retrieve_curriculum_details,
         llm_client=llm,
     )
+    agent.questions_on_current_topic = q_on_topic
 
     if session_state.get("current_question"):
         agent.last_asked_question = session_state["current_question"]
@@ -158,139 +186,81 @@ def _build_agent(session_state: dict) -> InterviewAgent:
     return agent
 
 
-# ── Public Adapter Methods (Called by InterviewService) ──────────────────────
+def extract_adaptive_signal(agent: InterviewAgent, last_turn_dict: Optional[dict] = None) -> Optional[dict]:
+    """Helper to extract safe user-facing adaptive signal from agent state."""
+    if not agent.state.evaluations:
+        return None
 
-async def generate_question(
-    candidate_id: str,
-    session_state: dict,
-) -> dict:
-    """
-    Generate the next interview question using InterviewAgent and CurriculumRetriever.
-
-    Returns: {"question": str, "topic": str}
-    """
-    cand_profile = get_candidate_profile(candidate_id)
-    agent = _build_agent(session_state)
-    q_count = session_state.get("question_count", 0)
-    covered = session_state.get("covered_topics", [])
-
-    # If new session (question_count == 0 and empty covered_topics), start interview
-    if q_count == 0 and not covered:
-        result = agent.start_interview(candidate_info=cand_profile)
-        return {
-            "question": result["question"],
-            "topic": result["topic"],
-        }
-
-    # Otherwise plan next question based on current state & scores
-    current_topic = session_state.get("current_topic") or (covered[-1] if covered else "Data Structures & Algorithmic Efficiency")
-    current_day = session_state.get("current_day") or "Day 1: Fundamentals & Code Quality"
-    scores = session_state.get("scores", [])
-
-    if scores:
-        last_score = scores[-1]
-        last_eval = AnswerEvaluation(score=last_score, quality=map_score_to_quality(last_score))
+    last_eval = agent.state.evaluations[-1]
+    if isinstance(last_eval, dict):
+        action = last_eval.get("action", ACTION_MODERATE)
+        quality = last_eval.get("quality", "moderate")
+        score = last_eval.get("score", 5.0)
     else:
-        last_eval = AnswerEvaluation(score=5.0, quality="moderate")
+        action = getattr(last_eval, "action", ACTION_MODERATE)
+        quality = getattr(last_eval, "quality", "moderate")
+        score = getattr(last_eval, "score", 5.0)
 
-    # Count questions on current topic
-    history = session_state.get("conversation_history", [])
-    questions_on_topic = sum(1 for h in history if h.get("topic") == current_topic) or 1
-
-    action = agent.planner.plan_next_action(
-        evaluation=last_eval,
-        current_topic=current_topic,
-        current_day=current_day,
-        covered_topics=covered,
-        covered_days=session_state.get("covered_days", []),
-        questions_on_current_topic=questions_on_topic,
-        total_questions=q_count,
-        required_unique_units=4,
-    )
-
-    target_topic = action.target_topic or current_topic
-    curriculum_context = retrieve_curriculum_text(target_topic)
-
-    question = agent.generate_question(action, curriculum_context)
+    reason_map = {
+        ACTION_HARDER: "Strong technical answer demonstrated — increasing difficulty depth.",
+        ACTION_CLARIFY: "Knowledge gap detected — tailoring clarification question.",
+        ACTION_MODERATE: "Solid core explanation — maintaining current difficulty level.",
+        ACTION_NEW_TOPIC: f"Topic depth satisfied — transitioning to next curriculum topic.",
+    }
+    safe_reason = reason_map.get(action, "Answer evaluated and adaptive path updated.")
 
     return {
-        "question": question,
-        "topic": target_topic,
+        "action": action,
+        "quality": quality,
+        "score": score,
+        "topic": agent.state.current_topic or "General Technical",
+        "difficultyDelta": 1 if action == ACTION_HARDER else (-1 if action == ACTION_CLARIFY else 0),
+        "reason": safe_reason,
     }
 
 
-async def evaluate_answer(
-    question: str,
-    answer: str,
-    session_state: dict,
-) -> dict:
-    """
-    Evaluate the candidate's answer using InterviewAgent and evaluator logic.
+# ── Legacy/Compatibility Helpers (Delegating to InterviewAgent) ─────────────
 
-    Returns: {"score": float, "evaluation": str, "adaptive_signal": dict}
-    """
-    agent = _build_agent(session_state)
-    topic = session_state.get("current_topic") or "General Technical"
-    curriculum_context = retrieve_curriculum_text(topic)
+async def generate_question(candidate_id: str, session_state: dict) -> dict:
+    """Compatibility wrapper delegating question generation to InterviewAgent."""
+    agent = build_agent(session_state)
+    cand_profile = get_candidate_profile(candidate_id)
+    if session_state.get("question_count", 0) == 0 and not session_state.get("covered_topics"):
+        res = agent.start_interview(candidate_info=cand_profile)
+        return {"question": res["question"], "topic": res["topic"]}
+    
+    context = retrieve_curriculum_text(agent.state.current_topic or "Technical")
+    from agent.question_planner import PlannerAction
+    action = PlannerAction(action_type=ACTION_MODERATE, target_topic=agent.state.current_topic)
+    q = agent.generate_question(action, context)
+    return {"question": q, "topic": agent.state.current_topic or "Technical"}
 
+
+async def evaluate_answer(question: str, answer: str, session_state: dict) -> dict:
+    """Compatibility wrapper delegating evaluation to InterviewAgent."""
+    agent = build_agent(session_state)
+    curriculum_context = retrieve_curriculum_text(session_state.get("current_topic") or "General")
     evaluation = agent_evaluate_answer(
         question=question,
         answer=answer,
         curriculum_context=curriculum_context,
         llm_client=agent.llm_client,
     )
-
-    eval_text = evaluation.reasoning or f"Quality: {evaluation.quality}. {', '.join(evaluation.strengths)}"
-    if not eval_text:
-        eval_text = "Answer evaluated."
-
-    # Compute planner action to build adaptive signal metadata
-    covered = session_state.get("covered_topics", [])
-    history = session_state.get("conversation_history", [])
-    questions_on_topic = sum(1 for h in history if h.get("topic") == topic) or 1
-
-    action = agent.planner.plan_next_action(
-        evaluation=evaluation,
-        current_topic=topic,
-        current_day=session_state.get("current_day") or "Day 1",
-        covered_topics=covered,
-        covered_days=session_state.get("covered_days", []),
-        questions_on_current_topic=questions_on_topic,
-        total_questions=session_state.get("question_count", 0),
-        required_unique_units=4,
-    )
-
-    # Safe user-facing reason (NEVER expose internal chain of thought)
-    reason_map = {
-        ACTION_HARDER: "Strong technical answer demonstrated — increasing difficulty depth.",
-        ACTION_CLARIFY: "Knowledge gap detected — tailoring clarification question.",
-        ACTION_MODERATE: "Solid core explanation — maintaining current difficulty level.",
-        ACTION_NEW_TOPIC: f"Topic depth satisfied — transitioning to {action.target_topic or 'next curriculum topic'}.",
-    }
-    safe_reason = reason_map.get(action.action_type, "Answer evaluated and adaptive path updated.")
-
-    adaptive_signal = {
-        "action": action.action_type,
-        "quality": evaluation.quality,
-        "score": evaluation.score,
-        "topic": topic,
-        "difficultyDelta": action.difficulty_delta,
-        "reason": safe_reason,
-    }
-
     return {
         "score": evaluation.score,
-        "evaluation": eval_text,
-        "adaptive_signal": adaptive_signal,
+        "evaluation": evaluation.reasoning or "Evaluated",
+        "adaptive_signal": {
+            "action": ACTION_MODERATE,
+            "quality": evaluation.quality,
+            "score": evaluation.score,
+            "topic": session_state.get("current_topic") or "General",
+            "difficultyDelta": 0,
+            "reason": "Answer evaluated.",
+        }
     }
 
 
 async def generate_feedback(session_state: dict) -> dict:
-    """
-    Generate final interview feedback using InterviewAgent and feedback synthesis.
-
-    Returns: {"summary": str, "strengths": list[str], "gaps": list[str], "next": list[str]}
-    """
-    agent = _build_agent(session_state)
+    """Compatibility wrapper delegating feedback to InterviewAgent."""
+    agent = build_agent(session_state)
     return agent.generate_feedback()
-

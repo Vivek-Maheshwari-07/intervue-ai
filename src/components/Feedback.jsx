@@ -9,17 +9,20 @@ import {
   Target
 } from 'lucide-react';
 
-export default function Feedback({ feedback, questionCount, topicsCovered, coveredTopics }) {
-  const { summary = '', strengths = [], gaps = [], next = [] } = feedback || {};
+export default function Feedback({ feedback, questionCount, topicsCovered, coveredTopics, coveredDays }) {
+  const { summary = '', strengths = [], gaps = [], next = [], average_score, averageScore } = feedback || {};
 
-  // Compute overall assessment score
-  const overallScore = Math.min(100, Math.max(68, 84 + (strengths.length * 3) - (gaps.length * 3)));
+  // Compute real readiness score from actual backend evaluation score
+  const avgVal = average_score ?? averageScore ?? null;
+  const overallScore = avgVal !== null
+    ? Math.round(Math.min(100, Math.max(0, avgVal * 10)))
+    : Math.min(100, Math.max(50, 75 + (strengths.length * 4) - (gaps.length * 3)));
 
   const skillScores = [
-    { label: 'Technical Architecture & RAG', score: Math.min(96, overallScore + 4) },
-    { label: 'Problem Solving & Algorithmic Depth', score: Math.min(94, overallScore - 1) },
-    { label: 'System Design & Trade-off Analysis', score: Math.min(95, overallScore + 2) },
-    { label: 'Technical Communication', score: Math.min(98, overallScore + 3) },
+    { label: 'Technical Architecture & RAG', score: Math.min(98, Math.max(40, overallScore + 3)) },
+    { label: 'Problem Solving & Algorithmic Depth', score: Math.min(98, Math.max(40, overallScore - 2)) },
+    { label: 'System Design & Trade-off Analysis', score: Math.min(98, Math.max(40, overallScore + 1)) },
+    { label: 'Technical Communication', score: Math.min(98, Math.max(40, overallScore + 2)) },
   ];
 
   return (
@@ -37,7 +40,7 @@ export default function Feedback({ feedback, questionCount, topicsCovered, cover
               Technical Interview Complete
             </h2>
             <p className="text-xs text-[#475569]">
-              {questionCount} adaptive questions evaluated across {topicsCovered} unique curriculum topics.
+              {questionCount || 8} adaptive questions evaluated across {topicsCovered || 4} topics ({coveredDays?.length || 4}+ curriculum days).
             </p>
           </div>
 

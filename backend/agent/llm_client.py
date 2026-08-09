@@ -32,13 +32,17 @@ class LLMClient:
         raise NotImplementedError
 
 
+import time
+
 class OllamaLLMClient(LLMClient):
     """
     Ollama-backed client targeting Qwen3 or configured model.
     Uses Python standard library urllib to avoid extra dependencies.
+    Includes a 60-second cooldown recovery mechanism if connection fails.
     """
 
-    _connection_failed: bool = False
+    _last_failure_time: float = 0.0
+    _cooldown_seconds: int = 60
 
     def __init__(self, model: Optional[str] = None, base_url: Optional[str] = None, timeout: int = 60):
         self.model = model or DEFAULT_OLLAMA_MODEL
@@ -49,9 +53,10 @@ class OllamaLLMClient(LLMClient):
         """
         Send completion request to Ollama /api/generate endpoint.
         """
-        if OllamaLLMClient._connection_failed:
+        now = time.time()
+        if OllamaLLMClient._last_failure_time > 0 and (now - OllamaLLMClient._last_failure_time) < OllamaLLMClient._cooldown_seconds:
             raise OllamaConnectionError(
-                f"Could not connect to Ollama at {self.base_url} (cached offline)."
+                f"Could not connect to Ollama at {self.base_url} (in {OllamaLLMClient._cooldown_seconds}s cooldown)."
             )
 
         url = f"{self.base_url}/api/generate"
@@ -76,9 +81,10 @@ class OllamaLLMClient(LLMClient):
             with urllib.request.urlopen(req, timeout=self.timeout) as response:
                 result = json.loads(response.read().decode("utf-8"))
                 raw_response = result.get("response", "")
+                OllamaLLMClient._last_failure_time = 0.0
                 return self._clean_text(raw_response)
         except (urllib.error.URLError, Exception) as e:
-            OllamaLLMClient._connection_failed = True
+            OllamaLLMClient._last_failure_time = time.time()
             raise OllamaConnectionError(
                 f"Could not connect to Ollama at {self.base_url}. "
                 f"Ensure Ollama is running and model '{self.model}' is available. Details: {e}"

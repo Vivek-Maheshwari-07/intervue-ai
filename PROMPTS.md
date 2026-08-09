@@ -1,5 +1,12 @@
 # Hackathon AI Usage Log — PROMPTS.md
 
+## Team Members & Attribution
+- **Vivek Maheshwari** — Person 1 (Agent Orchestration, Planner Engine, Evaluator & LLM Integration)
+- **Aayush Malhotra** — Person 2 (Curriculum RAG Ingestion, ChromaDB Vector Store & Retriever)
+- **Manav Lathiya** — Person 3 (FastAPI Backend, SQLite Persistence & React Frontend UX)
+
+---
+
 ## Entry 1 — Person 1 (AI / Agent Engineer Foundation)
 
 ### Prompt Received
@@ -19,71 +26,39 @@ User prompt requesting Person 1 responsibility implementation for the ABTalks Vi
 - **Decoupled Interfaces**: Provided pluggable hooks for Person 2 (`CurriculumRetriever.search_curriculum(query)`) and Person 3 (`to_dict()` / `from_dict()` for SQLite persistence).
 - **Independent Test Suite** (`backend/tests/test_agent.py`): 12 offline unit tests validating evaluator mapping, planner actions, hard completion rules, state updates, and feedback schema without network/external dependencies.
 
-### Files Created
-- `backend/agent/__init__.py`
-- `backend/agent/state.py`
-- `backend/agent/evaluator.py`
-- `backend/agent/question_planner.py`
-- `backend/agent/prompts.py`
-- `backend/agent/feedback.py`
-- `backend/agent/interview_agent.py`
-- `backend/tests/test_agent.py`
-- `PROMPTS.md`
+---
 
-### Files Modified
-None (Existing frontend in `src/` left completely untouched).
+## Entry 2 — Person 2 (Curriculum RAG & Ingestion)
 
-### Key Architectural Decisions Made
-1. **Source of Truth**: Python agent code controls state, topic counts, question counts, and completion checks. LLM generates questions and evaluates responses but never decides completion policy.
-2. **Decoupling**: Evaluator, planner, and curriculum retriever use function interfaces/fallbacks so LLM / Qwen3, ChromaDB RAG, and FastAPI can be connected seamlessly by teammates.
+### Implementation Summary
+- **Curriculum Parser** (`src/curriculum_parser.py`): Parsed `data/curriculum.json` into ChromaDB documents, preserving `"day"` (`Day 1` .. `Day 31`), `"title"`, `"type"`, and `"tools"` metadata.
+- **Vector Store & Retriever** (`src/vector_store.py`, `src/retriever.py`): Vectorized curriculum records using sentence-transformers embedding functions (`all-MiniLM-L6-v2`) in ChromaDB. Added auto-ingestion on first query.
 
 ---
 
-## Entry 2 — Task 2: Real LLM Integration (Qwen3 via Ollama)
-
-### Prompt Received
-User prompt requesting real LLM integration using local model `qwen3:8b` via Ollama (`http://localhost:11434`):
-- Implement clean `LLMClient` abstraction in `backend/agent/llm_client.py`.
-- Connect `InterviewAgent`, `evaluate_answer`, and `generate_final_feedback` to `OllamaLLMClient`.
-- Implement `MockLLMClient` to ensure unit test suite runs 100% offline without requiring Ollama.
-- Enforce strict single-question generation prompt and robust JSON parsing for answer evaluations and feedback synthesis.
-- Preserve Python-controlled hard completion rule (`question_count >= 8 AND unique_covered >= 4`).
-- Update unit tests and perform a real Ollama smoke test.
+## Entry 3 — Person 3 (FastAPI Service, SQLite & Unified Frontend UX)
 
 ### Implementation Summary
-- **LLM Client Abstraction** (`backend/agent/llm_client.py`):
-  - Created base `LLMClient` class with `generate()` and `generate_json()` methods.
-  - Implemented `OllamaLLMClient` using standard library `urllib` to connect to Ollama REST API (`/api/generate`) with model `qwen3:8b` (configurable via `OLLAMA_MODEL` and `OLLAMA_BASE_URL` environment variables).
-  - Added robust response cleaning (`_clean_text`) to strip reasoning/thinking blocks (`<think>...</think>`, `...done thinking.`), preambles, and markdown headings. Added `_extract_json` to parse raw or markdown JSON responses safely.
-  - Implemented `MockLLMClient` for offline unit testing without network or Ollama dependencies.
-  - Created clear `OllamaConnectionError` for actionable reporting when Ollama server is unreachable.
-- **LLM Answer Evaluator** (`backend/agent/evaluator.py`):
-  - Added `evaluate_answer_with_llm(llm_client, question, answer, curriculum_context)` executing `ANSWER_EVALUATION_PROMPT`.
-  - Parses score (0-10), quality (`weak`, `moderate`, `strong`, `excellent`), strengths, gaps, and reasoning into `AnswerEvaluation`.
-- **Strict Question Generator** (`backend/agent/interview_agent.py`):
-  - Enforced a strict system prompt instructing Qwen3 to ask exactly ONE question, without reasoning explanations, answers, or multiple options.
-- **Structured LLM Feedback** (`backend/agent/feedback.py`):
-  - Connected `generate_final_feedback` to `llm_client.generate_json(...)` returning JSON matching `{"summary": "...", "strengths": [...], "gaps": [...], "next": [...]}`.
-- **Hard Completion Rule Preservation**:
-  - Maintained `InterviewAgent.should_end()` checking `question_count >= 8 AND unique_covered >= 4` strictly in Python.
-- **Offline Unit Test Suite** (`backend/tests/test_agent.py`):
-  - Expanded test suite to **22 unit tests** using `MockLLMClient`. Validated mock question generation, adaptive instructions, prompt context propagation, curriculum context injection, JSON parsing, malformed output handling, and completion rules.
-- **Real Ollama Smoke Test**:
-  - Connected Python `OllamaLLMClient` to local Ollama server at `http://localhost:11434` with model `qwen3:8b`.
-  - Successfully generated interview questions and verified API responses: `CONNECTED TO OLLAMA: Hello! How can I assist you today?`.
+- **FastAPI Endpoints** (`backend/api/interview.py`, `backend/services/interview_service.py`): Provided HTTP interface for starting and progressing technical interviews. Synchronized turn state with SQLite (`session_manager.py`).
+- **React Frontend UI** (`src/components/`, `src/hooks/useInterview.js`): Refactored UI to light theme single canonical layout with hero component, candidate details selector, adaptive signal drawer, and structured feedback report.
 
-### Files Created
-- `backend/agent/llm_client.py`
+---
 
-### Files Modified
-- `backend/agent/__init__.py`
-- `backend/agent/evaluator.py`
-- `backend/agent/feedback.py`
-- `backend/agent/interview_agent.py`
-- `backend/tests/test_agent.py`
-- `PROMPTS.md`
+## Entry 4 — Refactoring STEP 1: Single Source of Truth & Technical Specification API
 
-### Safety Checks Verified
-1. **Zero External Dependencies**: Implemented via standard library `urllib` (no extra pip packages required).
-2. **Offline Tests**: All 22 unit tests run offline without network or Ollama running.
-3. **No Teammate Churn**: Existing React UI (`src/`), FastAPI specifications, and RAG interfaces remain untouched.
+### Implementation Summary
+- **Single Source of Truth**: Made `InterviewAgent` in `backend/agent/interview_agent.py` the authoritative orchestration layer across turns, answer evaluation, and completion rules.
+- **Technical Specification API Payload**: Updated `backend/models/schemas.py` and `backend/api/interview.py` to accept `candidate`, `message`, `sessionId`, and return `reply` and `done` flags.
+- **Session Synchronization**: Synchronized SQLite session persistence with `InterviewAgentState` after every turn.
+
+---
+
+## Entry 5 — Refactoring STEP 2 & STEP 3: Curriculum DAY Coverage, Offline Fallback & Hackathon Readiness
+
+### Implementation Summary
+- **Curriculum DAY Tracking & RAG Metadata**: Propagated ChromaDB document metadata (`"day": 7`, `"title": "Embeddings Explained"`) directly into `state.covered_days`. Enforced `should_end()` checking `question_count >= 8 AND covered_days >= 4`.
+- **Dynamic Answer-Differentiated Fallback**: Implemented concept extraction (`extract_key_concepts`) to generate tailored follow-up questions offline based on candidate answer text.
+- **Candidate Personalization**: Personalizes starting topic and topic prioritization from candidate records in `data/candidates.json`.
+- **Ollama Cooldown Recovery**: Replaced permanent offline latch with a 60-second cooldown timer for automatic connection recovery.
+- **Real Readiness Score Metrics**: Updated `Feedback.jsx` to display real evaluation metrics computed from backend turn evaluation scores.
+- **Full Verification & Testing**: All 35 pytest unit & integration tests passed cleanly in 26s; E2E Scenarios A–E passed; `npm run build` succeeded.
