@@ -308,8 +308,12 @@ npm run build
 
 To host **Intervue AI** publicly for judges at zero cost (₹0):
 
-1. **Frontend (Vercel)**: Import repository into Vercel and configure `VITE_API_URL` pointing to your Render backend API.
+1. **Frontend (Vercel)**: Import repository into Vercel and configure `VITE_API_URL` pointing to your Render backend API (e.g. `https://intervue-ai-backend.onrender.com`).
 2. **Backend (Render)**: Deploy as a Python Web Service using `render.yaml`:
    - **Build Command**: `pip install -r backend/requirements.txt`
    - **Start Command**: `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
-   - **Environment Variable**: Set `CORS_ORIGINS` to `*` or your Vercel URL.
+   - **Environment Variables**:
+     - `CORS_ORIGINS`: `https://your-app.vercel.app,*`
+     - `OLLAMA_BASE_URL`: Set to a public remote GPU Ollama URL (e.g., via Ngrok tunnel `https://xxxx.ngrok-free.app` or Modal GPU host).
+     - *Note*: Since Render containers cannot connect to your local PC's `localhost:11434`, if `OLLAMA_BASE_URL` is omitted or unreachable, the system automatically uses its built-in deterministic fallback engine with zero downtime.
+
