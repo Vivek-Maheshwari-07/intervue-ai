@@ -69,8 +69,18 @@ class QuestionPlanner:
         # Count unique topics/days covered so far
         unique_covered_count = max(len(set(covered_topics)), len(set(covered_days)))
 
-        # Rule 1: Weak answer (0-3) -> Ask simpler clarification, stay on current topic
+        # Rule 1: Weak answer (0-3) -> Ask simpler clarification, stay on current topic unless max questions on topic reached
         if quality == QUALITY_WEAK:
+            if questions_on_current_topic >= 3 and unique_covered_count < required_unique_units:
+                next_topic, next_day = self._select_next_uncovered(covered_topics, covered_days)
+                return PlannerAction(
+                    action_type=ACTION_NEW_TOPIC,
+                    target_topic=next_topic,
+                    target_day=next_day,
+                    difficulty_delta=0,
+                    reasoning=f"Weak answers on '{current_topic}'. Moving to new topic '{next_topic}' to fulfill curriculum coverage."
+                )
+
             return PlannerAction(
                 action_type=ACTION_CLARIFY,
                 target_topic=current_topic,

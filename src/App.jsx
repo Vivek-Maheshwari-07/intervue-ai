@@ -2,27 +2,32 @@ import React, { useState } from 'react';
 import Navbar from './components/Navbar';
 import MatrixDashboard from './components/MatrixDashboard';
 import AIInterviewer from './components/AIInterviewer';
-import DelegationEngine from './components/DelegationEngine';
 import CandidateDetails from './components/CandidateDetails';
-import LiveInterview from './components/LiveInterview';
 import { INITIAL_CANDIDATES } from './data/mockData';
+import { useInterview } from './hooks/useInterview';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('matrix');
+  // Default home view is candidate overview
+  const [activeTab, setActiveTab] = useState('candidates');
   const [candidates, setCandidates] = useState(INITIAL_CANDIDATES);
   const [selectedDifficulty, setSelectedDifficulty] = useState(6);
+
+  // Centralized Single Canonical Interview State Hook
+  const interviewState = useInterview();
 
   // Compute average reliability score
   const totalReliability = Math.round(
     candidates.reduce((acc, curr) => acc + curr.responsibility, 0) / candidates.length
   );
 
-  return (
-    <div className="min-h-screen bg-[#0b0f19] text-slate-100 font-['Plus_Jakarta_Sans',sans-serif] selection:bg-cyan-500/30 selection:text-cyan-200 flex flex-col">
-      {/* Dynamic Background Glow Orbs */}
-      <div className="fixed top-0 left-1/4 w-[500px] h-[500px] bg-cyan-500/5 rounded-full blur-[140px] pointer-events-none" />
-      <div className="fixed bottom-0 right-1/4 w-[600px] h-[600px] bg-purple-500/5 rounded-full blur-[160px] pointer-events-none" />
+  // Handler for Start Interview trigger from Candidate Overview
+  const handleStartInterviewFromProfile = (candidateId) => {
+    interviewState.startSession(candidateId);
+    setActiveTab('interviewer');
+  };
 
+  return (
+    <div className="min-h-screen bg-[#F7F6F2] text-[#1C1C1A] font-sans flex flex-col selection:bg-[#EEF0FF] selection:text-[#4F46E5]">
       {/* Top Navigation */}
       <Navbar
         activeTab={activeTab}
@@ -32,7 +37,22 @@ export default function App() {
       />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {activeTab === 'candidates' && (
+          <CandidateDetails
+            candidates={candidates}
+            onStartInterview={handleStartInterviewFromProfile}
+          />
+        )}
+
+        {activeTab === 'interviewer' && (
+          <AIInterviewer
+            candidates={candidates}
+            interviewState={interviewState}
+            onStartInterview={handleStartInterviewFromProfile}
+          />
+        )}
+
         {activeTab === 'matrix' && (
           <MatrixDashboard
             candidates={candidates}
@@ -41,41 +61,17 @@ export default function App() {
             setSelectedDifficulty={setSelectedDifficulty}
           />
         )}
-
-        {activeTab === 'interviewer' && (
-          <AIInterviewer
-            candidates={candidates}
-            setCandidates={setCandidates}
-          />
-        )}
-
-        {activeTab === 'delegation' && (
-          <DelegationEngine
-            candidates={candidates}
-          />
-        )}
-
-        {activeTab === 'candidates' && (
-          <CandidateDetails
-            candidates={candidates}
-          />
-        )}
-
-        {activeTab === 'live' && (
-          <LiveInterview />
-        )}
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-800/60 py-6 text-center text-xs text-slate-500 font-mono">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <footer className="border-t border-[#E4E2DB] bg-[#F1F0EB] py-6 text-center text-xs text-[#686862]">
+        <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center space-x-2">
-            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-            <span className="text-slate-400 font-bold">Intervue AI</span>
-            <span>— Responsibility vs Difficulty Assessment Platform</span>
+            <span className="font-semibold text-[#1C1C1A]">INTERVUE AI</span>
+            <span className="text-[#96968F]">— Personalized AI Technical Interviewer</span>
           </div>
-          <div>
-            <span>Engineered with React + Chart.js + Tailwind CSS</span>
+          <div className="text-[#96968F]">
+            <span>Engineered by Vivek Maheshwari, Aayush Malhotra, Manav Lathiya</span>
           </div>
         </div>
       </footer>

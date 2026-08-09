@@ -38,6 +38,8 @@ class OllamaLLMClient(LLMClient):
     Uses Python standard library urllib to avoid extra dependencies.
     """
 
+    _connection_failed: bool = False
+
     def __init__(self, model: Optional[str] = None, base_url: Optional[str] = None, timeout: int = 60):
         self.model = model or DEFAULT_OLLAMA_MODEL
         self.base_url = (base_url or DEFAULT_OLLAMA_BASE_URL).rstrip('/')
@@ -47,6 +49,11 @@ class OllamaLLMClient(LLMClient):
         """
         Send completion request to Ollama /api/generate endpoint.
         """
+        if OllamaLLMClient._connection_failed:
+            raise OllamaConnectionError(
+                f"Could not connect to Ollama at {self.base_url} (cached offline)."
+            )
+
         url = f"{self.base_url}/api/generate"
         payload = {
             "model": self.model,
@@ -70,13 +77,12 @@ class OllamaLLMClient(LLMClient):
                 result = json.loads(response.read().decode("utf-8"))
                 raw_response = result.get("response", "")
                 return self._clean_text(raw_response)
-        except urllib.error.URLError as e:
+        except (urllib.error.URLError, Exception) as e:
+            OllamaLLMClient._connection_failed = True
             raise OllamaConnectionError(
                 f"Could not connect to Ollama at {self.base_url}. "
                 f"Ensure Ollama is running and model '{self.model}' is available. Details: {e}"
             )
-        except Exception as e:
-            raise OllamaConnectionError(f"Ollama generation failed: {e}")
 
     def generate_json(self, prompt: str, system_prompt: Optional[str] = None) -> Dict[str, Any]:
         """

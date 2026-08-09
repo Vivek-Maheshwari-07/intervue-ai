@@ -2,82 +2,138 @@
 
 @layer base {
   body {
-    background-color: #0b0f19;
-    color: #f1f5f9;
+    background-color: #F7F6F2;
+    color: #1C1C1A;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     min-height: 100vh;
     overflow-x: hidden;
   }
 }
 
-/* Custom Scrollbar */
+/* Custom Scrollbar - Subdued Light Enterprise Style */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0d1322;
+  background: #F1F0EB;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 4px;
+  background: #D7D5CD;
+  border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #92928C;
 }
 
-/* Glassmorphism card styles */
-.glass-panel {
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+/* Clean Enterprise Card Surfaces */
+.panel {
+  background-color: #FFFFFF;
+  border: 1px solid #E4E2DB;
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
-.glass-panel-glow {
-  background: rgba(15, 23, 42, 0.85);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(56, 189, 248, 0.2);
-  box-shadow: 0 0 25px -5px rgba(56, 189, 248, 0.15);
+.panel-subtle {
+  background-color: #FCFCFA;
+  border: 1px solid #E4E2DB;
+  border-radius: 10px;
 }
 
-/* Custom Grid Background Pattern */
-.bg-grid-pattern {
+.panel-elevated {
+  background-color: #FFFFFF;
+  border: 1px solid #D7D5CD;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* Clean Button Styles */
+.btn-primary {
+  background-color: #4F46E5;
+  color: #FFFFFF;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  transition: background-color 150ms ease, box-shadow 150ms ease;
+}
+.btn-primary:hover:not(:disabled) {
+  background-color: #4338CA;
+}
+
+.btn-secondary {
+  background-color: #FFFFFF;
+  border: 1px solid #E4E2DB;
+  color: #1C1C1A;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 13px;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+.btn-secondary:hover:not(:disabled) {
+  background-color: #F7F6F2;
+  border-color: #D7D5CD;
+}
+
+/* Subtle Status Badges */
+.badge-accent {
+  background-color: #EEF0FF;
+  color: #4F46E5;
+  border: 1px solid #D9E0FF;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badge-success {
+  background-color: #EAF5EF;
+  color: #2F7D5A;
+  border: 1px solid #D1EADE;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badge-warning {
+  background-color: #FFF6DF;
+  color: #B7791F;
+  border: 1px solid #FFE9B3;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badge-error {
+  background-color: #FCECEC;
+  color: #B54747;
+  border: 1px solid #F8CACA;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badge-neutral {
+  background-color: #F1F0EB;
+  color: #6B6B66;
+  border: 1px solid #E4E2DB;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* Grid Pattern for Scatter Matrix */
+.bg-grid-pattern-light {
   background-size: 32px 32px;
   background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    linear-gradient(to right, #E4E2DB 1px, transparent 1px),
+    linear-gradient(to bottom, #E4E2DB 1px, transparent 1px);
 }
 
-/* Glowing text effects */
-.text-glow-cyan {
-  text-shadow: 0 0 15px rgba(6, 182, 212, 0.5);
-}
-
-.text-glow-purple {
-  text-shadow: 0 0 15px rgba(168, 85, 247, 0.5);
-}
-
-.text-glow-emerald {
-  text-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
-}
-
-/* Pulse animation */
-@keyframes pulse-subtle {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.85; transform: scale(0.99); }
-}
-
-.animate-pulse-subtle {
-  animation: pulse-subtle 4s infinite ease-in-out;
-}
-
-/* Fade-in animation for dynamic content */
+/* Transitions */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
 .animate-fadeIn {
-  animation: fadeIn 0.4s ease-out forwards;
+  animation: fadeIn 200ms ease-out forwards;
 }

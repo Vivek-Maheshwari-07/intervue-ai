@@ -1,116 +1,181 @@
 """
 Agent Adapter — integration layer for the InterviewAgent.
 
-# ──────────────────────────────────────────────────────────────────────────────
-# INTEGRATION POINTS FOR PERSON 1 / PERSON 2
-# ──────────────────────────────────────────────────────────────────────────────
-# This module provides a clean adapter that the InterviewService calls.
-# Currently it ships with a **stub implementation** that talks directly to
-# Qwen3 via the Ollama HTTP API so the app works end-to-end for demos.
-#
-# When the real InterviewAgent / QuestionPlanner / AnswerEvaluator /
-# CurriculumRetriever modules are ready, swap the stub methods below
-# with calls to the real classes.  Only this file needs to change.
-# ──────────────────────────────────────────────────────────────────────────────
+Connects:
+- InterviewAgent (backend/agent/interview_agent.py)
+- CurriculumRetriever (src/retriever.py)
+- FastAPI interview service (backend/services/interview_service.py)
+- SQLite session management (backend/database/session_manager.py)
 """
 
 from __future__ import annotations
 
-import json
-import os
 import logging
-import random
+import os
+import sys
+from typing import Dict, Any, Optional
 
-import httpx
+# Ensure project root is in sys.path
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+
+from agent.interview_agent import InterviewAgent
+from agent.state import InterviewState, STATUS_IN_PROGRESS, STATUS_COMPLETED
+from agent.llm_client import OllamaLLMClient, MockLLMClient, OllamaConnectionError
+from agent.evaluator import evaluate_answer as agent_evaluate_answer, map_score_to_quality, AnswerEvaluation
+from agent.question_planner import PlannerAction, ACTION_NEW_TOPIC, ACTION_HARDER, ACTION_CLARIFY, ACTION_MODERATE
 
 logger = logging.getLogger(__name__)
 
-OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3")
-OLLAMA_TIMEOUT = int(os.environ.get("OLLAMA_TIMEOUT", "120"))
-
-# Curriculum topics that map roughly to "days" in a training programme.
-# The real CurriculumRetriever would supply these dynamically.
-CURRICULUM_TOPICS = [
-    "Python Fundamentals",
-    "Data Structures & Algorithms",
-    "Object-Oriented Programming",
-    "Database & SQL",
-    "Web Development & APIs",
-    "System Design",
-    "Testing & Debugging",
-    "DevOps & Deployment",
-    "Machine Learning Basics",
-    "Software Engineering Best Practices",
-]
+# Single shared LLM client instance
+_llm_client_instance: Optional[Any] = None
 
 
-# ── Ollama helper ────────────────────────────────────────────────────────────
+def get_llm_client():
+    """Retrieve or create the LLM client instance (OllamaLLMClient with fallback capability)."""
+    global _llm_client_instance
+    if _llm_client_instance is None:
+        timeout = int(os.environ.get("OLLAMA_TIMEOUT", "3"))
+        _llm_client_instance = OllamaLLMClient(timeout=timeout)
+    return _llm_client_instance
 
-async def _call_ollama(prompt: str) -> str:
-    """Send a prompt to Qwen3 through Ollama and return the generated text."""
+
+# ── RAG Retriever helper ──────────────────────────────────────────────────────
+
+_retriever_instance = None
+_retriever_initialized = False
+
+
+def _get_retriever():
+    """Lazy initialize CurriculumRetriever."""
+    global _retriever_instance, _retriever_initialized
+    if not _retriever_initialized:
+        _retriever_initialized = True
+        try:
+            from src.retriever import CurriculumRetriever
+            _retriever_instance = CurriculumRetriever()
+        except Exception as exc:
+            logger.warning("Could not initialize CurriculumRetriever: %s", exc)
+            _retriever_instance = None
+    return _retriever_instance
+
+
+def retrieve_curriculum_text(query: str) -> str:
+    """
+    Search ChromaDB vector store using CurriculumRetriever and return formatted text.
+    Handles RAG failures gracefully.
+    """
+    retriever = _get_retriever()
+    if not retriever:
+        return f"Standard curriculum context reference for: {query}"
     try:
-        async with httpx.AsyncClient(timeout=OLLAMA_TIMEOUT) as client:
-            resp = await client.post(
-                f"{OLLAMA_BASE_URL}/api/generate",
-                json={
-                    "model": OLLAMA_MODEL,
-                    "prompt": prompt,
-                    "stream": False,
-                    "options": {"temperature": 0.7, "num_predict": 512},
-                },
-            )
-            resp.raise_for_status()
-            return resp.json().get("response", "").strip()
+        results = retriever.search_curriculum(query, top_k=3)
+        if not results:
+            return f"Standard curriculum context reference for: {query}"
+        docs = [r.get("document", "") for r in results if isinstance(r, dict) and r.get("document")]
+        if docs:
+            return "\n\n".join(docs)
+        return f"Standard curriculum context reference for: {query}"
     except Exception as exc:
-        logger.warning("Ollama call failed (%s), falling back to stub.", exc)
-        return ""
+        logger.warning("RAG retrieval error for query '%s': %s", query, exc)
+        return f"Standard curriculum context reference for: {query}"
 
 
-# ── Public adapter methods ───────────────────────────────────────────────────
+# ── Session State <-> InterviewAgent Bridge ──────────────────────────────────
+
+def _build_agent(session_state: dict) -> InterviewAgent:
+    """
+    Reconstruct an InterviewAgent from an existing SQLite session dict.
+    """
+    candidate_id = session_state.get("candidate_id", "")
+    candidate_info = {"candidate_id": candidate_id} if candidate_id else session_state.get("candidate_info", {})
+
+    state = InterviewState(
+        session_id=session_state.get("session_id", "default_session"),
+        candidate_info=candidate_info,
+        question_count=session_state.get("question_count", 0),
+        covered_days=session_state.get("covered_days", []),
+        covered_topics=session_state.get("covered_topics", []),
+        conversation_history=session_state.get("conversation_history", []),
+        scores=session_state.get("scores", []),
+        evaluations=session_state.get("evaluations", []),
+        current_topic=session_state.get("current_topic"),
+        current_day=session_state.get("current_day"),
+        status=session_state.get("status", STATUS_IN_PROGRESS),
+    )
+
+    llm = get_llm_client()
+    agent = InterviewAgent(
+        state=state,
+        curriculum_retriever=retrieve_curriculum_text,
+        llm_client=llm,
+    )
+
+    if session_state.get("current_question"):
+        agent.last_asked_question = session_state["current_question"]
+
+    return agent
+
+
+# ── Public Adapter Methods (Called by InterviewService) ──────────────────────
 
 async def generate_question(
     candidate_id: str,
     session_state: dict,
 ) -> dict:
     """
-    Generate the next interview question.
+    Generate the next interview question using InterviewAgent and CurriculumRetriever.
 
     Returns: {"question": str, "topic": str}
-
-    # TODO: INTEGRATION POINT — replace with:
-    #   from interview_agent import InterviewAgent
-    #   agent = InterviewAgent()
-    #   result = agent.generate_question(candidate_id, session_state)
     """
-    covered = session_state.get("covered_topics", [])
+    agent = _build_agent(session_state)
     q_count = session_state.get("question_count", 0)
+    covered = session_state.get("covered_topics", [])
 
-    # Pick a topic that hasn't been fully covered yet
-    available = [t for t in CURRICULUM_TOPICS if t not in covered]
-    if not available:
-        available = CURRICULUM_TOPICS  # recycle if exhausted
-    topic = random.choice(available)
+    # If new session (question_count == 0 and empty covered_topics), start interview
+    if q_count == 0 and not covered:
+        result = agent.start_interview(candidate_info={"candidate_id": candidate_id})
+        return {
+            "question": result["question"],
+            "topic": result["topic"],
+        }
 
-    prompt = (
-        f"/no_think\nYou are an expert technical interviewer conducting an adaptive interview.\n"
-        f"The candidate ID is '{candidate_id}'.\n"
-        f"This is question number {q_count + 1}.\n"
-        f"Topics already covered: {', '.join(covered) if covered else 'none yet'}.\n"
-        f"Current topic to ask about: {topic}.\n\n"
-        f"Generate ONE clear, concise technical interview question about '{topic}'. "
-        f"The question should be appropriate for a software engineering candidate and "
-        f"require a detailed answer. Do not include the answer. "
-        f"Return ONLY the question text, nothing else."
+    # Otherwise plan next question based on current state & scores
+    current_topic = session_state.get("current_topic") or (covered[-1] if covered else "Data Structures & Algorithmic Efficiency")
+    current_day = session_state.get("current_day") or "Day 1: Fundamentals & Code Quality"
+    scores = session_state.get("scores", [])
+
+    if scores:
+        last_score = scores[-1]
+        last_eval = AnswerEvaluation(score=last_score, quality=map_score_to_quality(last_score))
+    else:
+        last_eval = AnswerEvaluation(score=5.0, quality="moderate")
+
+    # Count questions on current topic
+    history = session_state.get("conversation_history", [])
+    questions_on_topic = sum(1 for h in history if h.get("topic") == current_topic) or 1
+
+    action = agent.planner.plan_next_action(
+        evaluation=last_eval,
+        current_topic=current_topic,
+        current_day=current_day,
+        covered_topics=covered,
+        covered_days=session_state.get("covered_days", []),
+        questions_on_current_topic=questions_on_topic,
+        total_questions=q_count,
+        required_unique_units=4,
     )
 
-    question = await _call_ollama(prompt)
+    target_topic = action.target_topic or current_topic
+    curriculum_context = retrieve_curriculum_text(target_topic)
 
-    if not question:
-        # Stub fallback when Ollama is unavailable
-        question = _stub_question(topic, q_count)
+    question = agent.generate_question(action, curriculum_context)
 
-    return {"question": question, "topic": topic}
+    return {
+        "question": question,
+        "topic": target_topic,
+    }
 
 
 async def evaluate_answer(
@@ -119,171 +184,36 @@ async def evaluate_answer(
     session_state: dict,
 ) -> dict:
     """
-    Evaluate the candidate's answer.
+    Evaluate the candidate's answer using InterviewAgent and evaluator logic.
 
     Returns: {"score": float, "evaluation": str}
-
-    # TODO: INTEGRATION POINT — replace with:
-    #   from answer_evaluator import AnswerEvaluator
-    #   evaluator = AnswerEvaluator()
-    #   result = evaluator.evaluate(question, answer, session_state)
     """
-    prompt = (
-        f"/no_think\nYou are an expert technical interviewer evaluating a candidate's answer.\n\n"
-        f"Question: {question}\n\n"
-        f"Candidate's Answer: {answer}\n\n"
-        f"Evaluate the answer on a scale of 1-10 for:\n"
-        f"- Technical accuracy\n"
-        f"- Depth of understanding\n"
-        f"- Clarity of explanation\n\n"
-        f"Respond in EXACTLY this JSON format (no markdown, no extra text):\n"
-        f'{{"score": <number 1-10>, "evaluation": "<brief 1-2 sentence evaluation>"}}'
+    agent = _build_agent(session_state)
+    topic = session_state.get("current_topic") or "General Technical"
+    curriculum_context = retrieve_curriculum_text(topic)
+
+    evaluation = agent_evaluate_answer(
+        question=question,
+        answer=answer,
+        curriculum_context=curriculum_context,
+        llm_client=agent.llm_client,
     )
 
-    raw = await _call_ollama(prompt)
+    eval_text = evaluation.reasoning or f"Quality: {evaluation.quality}. {', '.join(evaluation.strengths)}"
+    if not eval_text:
+        eval_text = "Answer evaluated."
 
-    if raw:
-        try:
-            # Try to parse JSON from the response
-            parsed = json.loads(_extract_json(raw))
-            return {
-                "score": max(1, min(10, float(parsed.get("score", 5)))),
-                "evaluation": parsed.get("evaluation", "Answer evaluated."),
-            }
-        except (json.JSONDecodeError, ValueError, TypeError):
-            logger.warning("Could not parse evaluation JSON, using heuristic.")
-
-    # Stub fallback — basic heuristic
-    return _stub_evaluate(answer)
+    return {
+        "score": evaluation.score,
+        "evaluation": eval_text,
+    }
 
 
 async def generate_feedback(session_state: dict) -> dict:
     """
-    Generate final interview feedback.
+    Generate final interview feedback using InterviewAgent and feedback synthesis.
 
-    Returns: {"summary": str, "strengths": [str], "gaps": [str], "next": [str]}
-
-    # TODO: INTEGRATION POINT — replace with:
-    #   from interview_agent import InterviewAgent
-    #   agent = InterviewAgent()
-    #   result = agent.generate_feedback(session_state)
+    Returns: {"summary": str, "strengths": list[str], "gaps": list[str], "next": list[str]}
     """
-    answers_data = session_state.get("answers", [])
-    scores = session_state.get("scores", [])
-    topics = session_state.get("covered_topics", [])
-    avg_score = sum(scores) / len(scores) if scores else 5.0
-
-    # Build a summary of all Q&A for context
-    qa_summary = "\n".join(
-        f"Q{i+1} [{a.get('topic', '')}]: {a.get('question', '')[:100]}... → Score: {a.get('score', 'N/A')}"
-        for i, a in enumerate(answers_data)
-    )
-
-    prompt = (
-        f"/no_think\nYou are an expert technical interviewer writing a final assessment.\n\n"
-        f"Topics covered: {', '.join(topics)}\n"
-        f"Average score: {avg_score:.1f}/10\n"
-        f"Question summary:\n{qa_summary}\n\n"
-        f"Write a final interview assessment. Respond in EXACTLY this JSON format "
-        f"(no markdown, no extra text):\n"
-        f'{{"summary": "<2-3 sentence overall summary>",'
-        f' "strengths": ["<strength 1>", "<strength 2>", "<strength 3>"],'
-        f' "gaps": ["<gap 1>", "<gap 2>"],'
-        f' "next": ["<next topic 1>", "<next topic 2>", "<next topic 3>"]}}'
-    )
-
-    raw = await _call_ollama(prompt)
-
-    if raw:
-        try:
-            parsed = json.loads(_extract_json(raw))
-            return {
-                "summary": parsed.get("summary", "Interview completed."),
-                "strengths": parsed.get("strengths", []),
-                "gaps": parsed.get("gaps", []),
-                "next": parsed.get("next", []),
-            }
-        except (json.JSONDecodeError, ValueError, TypeError):
-            logger.warning("Could not parse feedback JSON, using stub.")
-
-    # Stub fallback
-    return _stub_feedback(topics, avg_score)
-
-
-# ── Stub / fallback implementations ─────────────────────────────────────────
-
-_STUB_QUESTIONS = {
-    "Python Fundamentals": "Explain the difference between a list and a tuple in Python. When would you choose one over the other?",
-    "Data Structures & Algorithms": "Describe how a hash map works internally. What is the time complexity of lookup, insertion, and deletion?",
-    "Object-Oriented Programming": "Explain the SOLID principles with a practical example of how you would apply the Single Responsibility Principle.",
-    "Database & SQL": "What is the difference between an INNER JOIN and a LEFT JOIN? Provide an example scenario for each.",
-    "Web Development & APIs": "Explain the difference between REST and GraphQL. What are the trade-offs of each approach?",
-    "System Design": "How would you design a URL shortening service like bit.ly? Discuss the key components and scalability considerations.",
-    "Testing & Debugging": "What is the difference between unit testing, integration testing, and end-to-end testing? When should you use each?",
-    "DevOps & Deployment": "Explain the concept of CI/CD pipelines. What stages would you include in a production deployment pipeline?",
-    "Machine Learning Basics": "Explain the difference between supervised and unsupervised learning. Give an example use case for each.",
-    "Software Engineering Best Practices": "What strategies would you use to manage technical debt in a growing codebase?",
-}
-
-
-def _stub_question(topic: str, q_count: int) -> str:
-    return _STUB_QUESTIONS.get(topic, f"Tell me about your experience with {topic}. What are the key concepts?")
-
-
-def _stub_evaluate(answer: str) -> dict:
-    length = len(answer.strip())
-    if length < 20:
-        return {"score": 3.0, "evaluation": "Answer is too brief. More detail needed."}
-    elif length < 100:
-        return {"score": 5.0, "evaluation": "Reasonable answer but could be more thorough."}
-    elif length < 300:
-        return {"score": 7.0, "evaluation": "Good answer with decent depth of understanding."}
-    else:
-        return {"score": 8.5, "evaluation": "Comprehensive and well-structured answer."}
-
-
-def _stub_feedback(topics: list[str], avg_score: float) -> dict:
-    strengths = []
-    gaps = []
-
-    if avg_score >= 7:
-        strengths.extend(["Strong technical fundamentals", "Clear communication"])
-    elif avg_score >= 5:
-        strengths.append("Adequate understanding of core concepts")
-    else:
-        gaps.append("Needs significant improvement in technical depth")
-
-    if len(topics) >= 4:
-        strengths.append(f"Broad coverage across {len(topics)} topic areas")
-    else:
-        gaps.append("Limited topic coverage")
-
-    for t in topics[:3]:
-        strengths.append(f"Demonstrated knowledge in {t}")
-
-    uncovered = [t for t in CURRICULUM_TOPICS if t not in topics]
-    next_topics = uncovered[:3] if uncovered else ["Advanced System Design", "Performance Optimization"]
-
-    if not gaps:
-        gaps = ["Could provide more real-world examples", "Some answers lacked depth"]
-
-    return {
-        "summary": (
-            f"The candidate completed {len(topics)} topic areas with an average score "
-            f"of {avg_score:.1f}/10. "
-            f"{'Overall strong performance.' if avg_score >= 7 else 'Room for improvement in several areas.'}"
-        ),
-        "strengths": strengths[:5],
-        "gaps": gaps[:3],
-        "next": next_topics[:4],
-    }
-
-
-def _extract_json(text: str) -> str:
-    """Try to extract JSON from a string that may contain surrounding text."""
-    # Find first { and last }
-    start = text.find("{")
-    end = text.rfind("}")
-    if start != -1 and end != -1 and end > start:
-        return text[start : end + 1]
-    return text
+    agent = _build_agent(session_state)
+    return agent.generate_feedback()

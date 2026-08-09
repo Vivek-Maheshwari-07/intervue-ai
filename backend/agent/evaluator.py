@@ -185,7 +185,13 @@ def evaluate_answer(
     Uses llm_client if provided, or custom evaluator_fn, otherwise falls back to deterministic evaluator.
     """
     if llm_client is not None:
-        return evaluate_answer_with_llm(llm_client, question, answer, curriculum_context)
+        try:
+            return evaluate_answer_with_llm(llm_client, question, answer, curriculum_context)
+        except Exception:
+            pass
     if evaluator_fn is not None:
-        return evaluator_fn(question, answer, curriculum_context)
+        try:
+            return evaluator_fn(question, answer, curriculum_context)
+        except Exception:
+            pass
     return _deterministic_mock_evaluator(question, answer, curriculum_context)

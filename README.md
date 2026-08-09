@@ -1,16 +1,71 @@
-# React + Vite
+# Intervue-AI — AI-Powered Adaptive Technical Interviewer
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Intervue-AI is an end-to-end adaptive interview platform. It dynamically assesses candidate technical depth using an adaptive question planner, answer evaluator, curriculum RAG (vector database), and local LLM evaluation (Qwen3 via Ollama) with deterministic rule-based fallbacks.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Quick Start (Single Command)
 
-## React Compiler
+To run the complete application (Frontend, FastAPI Backend, and Ollama check) in a single command:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm run dev
+```
 
-## Expanding the Oxlint configuration
+This single command uses `concurrently` to start:
+1. **Frontend**: React + Vite UI at `http://localhost:5173`
+2. **Backend**: FastAPI server at `http://localhost:8000` (liveness probe: `http://localhost:8000/health`)
+3. **Ollama Check**: Automatically verifies local Ollama status on `http://localhost:11434`
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+Works on Windows PowerShell, macOS, and Linux.
+
+---
+
+## Prerequisites
+
+- **Node.js**: v18 or higher (`node -v`)
+- **Python**: 3.10 or higher with required packages (`python -m pip install -r backend/requirements.txt -r requirements.txt`)
+- **Ollama (Optional)**:
+  - If installed and running (`ollama run qwen3`), live LLM generation and evaluations are used.
+  - If Ollama is not running, the application seamlessly runs using deterministic fallback evaluations and questions.
+
+---
+
+## Running Tests
+
+### Backend Unit & Integration Tests (Offline)
+```bash
+python -m pytest backend/tests
+```
+
+### Retrieval / RAG Unit Tests
+```bash
+python -m pytest tests
+```
+
+### Production Build Check
+```bash
+npm run build
+```
+
+---
+
+## Project Architecture
+
+```
+React LiveInterview UI (src/)
+       ↓
+POST /api/interview
+       ↓
+FastAPI Interview Service (backend/services/interview_service.py)
+       ↓
+Agent Adapter (backend/services/agent_adapter.py)
+       ↓
+Curriculum RAG (src/retriever.py -> ChromaDB)
+       ↓
+InterviewAgent (backend/agent/interview_agent.py)
+       ↓
+Ollama / Qwen3 (or deterministic fallback)
+       ↓
+SQLite Session Persistence (backend/database/session_manager.py)
+```

@@ -3,16 +3,11 @@ import {
   BarChart3, 
   Terminal as TerminalIcon, 
   Sliders, 
-  Plus, 
-  Info, 
   CheckCircle2, 
   AlertTriangle, 
   ShieldAlert, 
   Grid, 
-  Sparkles,
-  ArrowUpRight,
-  UserPlus,
-  RotateCcw
+  UserPlus
 } from 'lucide-react';
 
 export default function MatrixDashboard({ candidates, setCandidates, selectedDifficulty, setSelectedDifficulty }) {
@@ -23,10 +18,9 @@ export default function MatrixDashboard({ candidates, setCandidates, selectedDif
     role: '',
     responsibility: 70,
     maxDifficulty: 7,
-    colorHex: '#3b82f6'
+    colorHex: '#4F46E5'
   });
 
-  // Handle responsibility adjustment via slider
   const updateResponsibility = (id, newResp) => {
     setCandidates(prev => prev.map(c => {
       if (c.id === id) {
@@ -51,9 +45,9 @@ export default function MatrixDashboard({ candidates, setCandidates, selectedDif
       role: newCandidate.role || 'Custom Candidate',
       responsibility: resp,
       maxDifficulty: Math.max(1, Math.min(10, Math.round(resp / 10))),
-      avatarColor: 'from-blue-500 to-indigo-600',
-      borderColor: 'border-blue-500',
-      badgeColor: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+      avatarColor: 'from-indigo-500 to-blue-600',
+      borderColor: 'border-[#4F46E5]',
+      badgeColor: 'bg-[#EEF0FF] text-[#4F46E5] border-[#D9E0FF]',
       colorHex: newCandidate.colorHex,
       skills: {
         systemDesign: resp,
@@ -69,99 +63,90 @@ export default function MatrixDashboard({ candidates, setCandidates, selectedDif
 
     setCandidates(prev => [...prev, candidateObj]);
     setShowAddModal(false);
-    setNewCandidate({ name: '', role: '', responsibility: 70, maxDifficulty: 7, colorHex: '#3b82f6' });
-  };
-
-  const resetPresets = () => {
-    window.location.reload();
+    setNewCandidate({ name: '', role: '', responsibility: 70, maxDifficulty: 7, colorHex: '#4F46E5' });
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 max-w-5xl mx-auto">
       {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-2xl glass-panel p-6 sm:p-8 border border-slate-800">
-        <div className="absolute -right-10 -top-10 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute right-40 -bottom-10 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
-        
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-2xl">
-            <div className="flex items-center space-x-2 text-xs font-mono font-semibold text-cyan-400 uppercase tracking-widest">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Core Assessment Framework</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+      <div className="bg-[#FFFFFF] rounded-xl p-6 border border-[#E4E2DB] shadow-[0_1px_2px_rgba(0,0,0,0.04)] space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <span className="text-xs font-mono text-[#92928C] uppercase tracking-wider">
+              Assessment Matrix
+            </span>
+            <h1 className="text-2xl font-semibold text-[#1C1C1A]">
               Responsibility vs. Difficulty Matrix
             </h1>
-            <p className="text-sm text-slate-300 leading-relaxed">
-              Evaluating candidate ownership capability against technical task complexity. 
-              Visualizing how responsibility thresholds (100%, 75%, 60%) correlate with maximum safe execution difficulty.
+            <p className="text-xs text-[#6B6B66] leading-relaxed max-w-xl">
+              Evaluates candidate ownership capability against task technical complexity thresholds.
             </p>
           </div>
 
           {/* Quick Actions & View Switcher */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="bg-slate-900/90 p-1.5 rounded-xl border border-slate-800 flex items-center space-x-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="bg-[#F7F6F2] p-1 rounded-md border border-[#E4E2DB] flex items-center space-x-1">
               <button
                 onClick={() => setViewMode('bars')}
-                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`flex items-center space-x-1 px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${
                   viewMode === 'bars'
-                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-[#FFFFFF] text-[#4F46E5] shadow-xs font-semibold'
+                    : 'text-[#6B6B66] hover:text-[#1C1C1A]'
                 }`}
               >
                 <BarChart3 className="w-3.5 h-3.5" />
-                <span>Bar Chart</span>
+                <span>Bar View</span>
               </button>
 
               <button
                 onClick={() => setViewMode('matrix')}
-                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`flex items-center space-x-1 px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${
                   viewMode === 'matrix'
-                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-[#FFFFFF] text-[#4F46E5] shadow-xs font-semibold'
+                    : 'text-[#6B6B66] hover:text-[#1C1C1A]'
                 }`}
               >
                 <Grid className="w-3.5 h-3.5" />
-                <span>2D Scatter Grid</span>
+                <span>2D Grid</span>
               </button>
 
               <button
                 onClick={() => setViewMode('ascii')}
-                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`flex items-center space-x-1 px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${
                   viewMode === 'ascii'
-                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-[#FFFFFF] text-[#4F46E5] shadow-xs font-semibold'
+                    : 'text-[#6B6B66] hover:text-[#1C1C1A]'
                 }`}
               >
                 <TerminalIcon className="w-3.5 h-3.5" />
-                <span>Terminal ASCII</span>
+                <span>ASCII</span>
               </button>
             </div>
 
             <button
               onClick={() => setShowAddModal(true)}
-              className="flex items-center space-x-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 transition-all shadow-md shadow-cyan-500/20"
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-[#4F46E5] hover:bg-[#4338CA] text-[#FFFFFF] transition-colors cursor-pointer"
             >
-              <UserPlus className="w-4 h-4" />
-              <span>Add Candidate</span>
+              <UserPlus className="w-3.5 h-3.5" />
+              <span>Add Profile</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Difficulty Interactive Slider Bar */}
-      <div className="glass-panel rounded-xl p-5 border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-6">
+      {/* Difficulty Interactive Filter */}
+      <div className="bg-[#FFFFFF] rounded-xl p-4 border border-[#E4E2DB] shadow-[0_1px_2px_rgba(0,0,0,0.04)] flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center space-x-3 w-full md:w-auto">
-          <div className="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-            <Sliders className="w-5 h-5" />
+          <div className="w-8 h-8 rounded-md bg-[#EEF0FF] border border-[#D9E0FF] flex items-center justify-center text-[#4F46E5]">
+            <Sliders className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-white">Target Task Difficulty Filter</h3>
-            <p className="text-xs text-slate-400">Simulate task complexity from Level 1 (Easy) to Level 10 (High Risk System Design)</p>
+            <div className="text-xs font-semibold text-[#1C1C1A]">Task Difficulty Filter</div>
+            <div className="text-[11px] text-[#92928C]">Simulate task complexity from Level 1 to Level 10</div>
           </div>
         </div>
 
-        <div className="flex items-center space-x-4 w-full md:w-72">
+        <div className="flex items-center space-x-3 w-full md:w-64">
           <input
             type="range"
             min="1"
@@ -169,90 +154,67 @@ export default function MatrixDashboard({ candidates, setCandidates, selectedDif
             step="1"
             value={selectedDifficulty}
             onChange={(e) => setSelectedDifficulty(parseInt(e.target.value))}
-            className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+            className="w-full h-1.5 bg-[#F1F0EB] rounded-lg appearance-none cursor-pointer accent-[#4F46E5]"
           />
-          <div className="flex items-center space-x-1 min-w-[70px] bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-700 text-cyan-400 font-mono font-bold text-sm">
-            <span>Lvl</span>
-            <span className="text-base">{selectedDifficulty}</span>
+          <div className="bg-[#F7F6F2] px-2.5 py-1 rounded-md border border-[#E4E2DB] text-[#4F46E5] font-mono font-bold text-xs">
+            Level {selectedDifficulty}
           </div>
         </div>
       </div>
 
-      {/* MAIN VIEW AREA */}
+      {/* BAR VIEW */}
       {viewMode === 'bars' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Horizontal Chart */}
-          <div className="lg:col-span-2 glass-panel rounded-2xl p-6 border border-slate-800 space-y-6">
-            <div className="flex items-center justify-between">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 bg-[#FFFFFF] rounded-xl p-6 border border-[#E4E2DB] shadow-[0_1px_2px_rgba(0,0,0,0.04)] space-y-6">
+            <div className="flex items-center justify-between border-b border-[#E4E2DB] pb-3">
               <div>
-                <h2 className="text-lg font-bold text-white flex items-center space-x-2">
-                  <span>Responsibility Breakdown Bar Graph</span>
-                  <span className="text-xs font-normal text-slate-400">(X-Axis: Difficulty scale →)</span>
+                <h2 className="text-sm font-semibold text-[#1C1C1A]">
+                  Responsibility Breakdown
                 </h2>
-                <p className="text-xs text-slate-400 mt-1">
-                  Highlighting candidate readiness for Level {selectedDifficulty} tasks.
+                <p className="text-xs text-[#92928C]">
+                  Showing readiness for Level {selectedDifficulty} tasks
                 </p>
               </div>
-
-              <div className="text-xs text-slate-400 font-mono">
-                {candidates.length} Profiles Loaded
-              </div>
+              <span className="text-xs font-mono text-[#92928C]">{candidates.length} Profiles</span>
             </div>
 
-            {/* Dynamic Visual Bars */}
-            <div className="space-y-6 pt-4">
+            <div className="space-y-5">
               {candidates.map((c) => {
                 const canHandle = c.maxDifficulty >= selectedDifficulty;
                 return (
-                  <div key={c.id} className="space-y-2 group">
+                  <div key={c.id} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <div className="flex items-center space-x-2">
-                        <span className="font-bold text-white text-sm">{c.name}</span>
-                        <span className="text-slate-400 font-mono text-xs">({c.role})</span>
+                        <span className="font-semibold text-[#1C1C1A]">{c.name}</span>
+                        <span className="text-[#92928C] text-[11px]">({c.role})</span>
                         {canHandle ? (
-                          <span className="flex items-center space-x-1 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                            <CheckCircle2 className="w-3 h-3" />
-                            <span>Qualified for L{selectedDifficulty}</span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[#EAF5EF] text-[#2F7D5A] border border-[#D1EADE]">
+                            Qualified for L{selectedDifficulty}
                           </span>
                         ) : (
-                          <span className="flex items-center space-x-1 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                            <AlertTriangle className="w-3 h-3" />
-                            <span>Exceeds Max L{c.maxDifficulty}</span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[#FFF6DF] text-[#B7791F] border border-[#FFE9B3]">
+                            Max L{c.maxDifficulty}
                           </span>
                         )}
                       </div>
 
-                      <div className="flex items-center space-x-3 font-mono">
-                        <span className="text-slate-400">Max Difficulty: <strong className="text-cyan-400">L{c.maxDifficulty}</strong></span>
-                        <span className="text-base font-extrabold text-white">{c.responsibility}%</span>
+                      <div className="font-mono text-xs text-[#6B6B66]">
+                        {c.responsibility}%
                       </div>
                     </div>
 
-                    {/* Bar track */}
-                    <div className="relative w-full h-8 bg-slate-900/90 rounded-xl overflow-hidden p-1 border border-slate-800">
-                      {/* Grid markers inside bar */}
-                      <div className="absolute inset-0 flex justify-between px-2 pointer-events-none opacity-20">
-                        {[10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map(val => (
-                          <div key={val} className="h-full border-r border-slate-500 text-[9px] text-slate-400 pt-0.5"></div>
-                        ))}
-                      </div>
-
-                      {/* Filled Progress */}
+                    {/* Progress Bar Track */}
+                    <div className="w-full h-3 bg-[#F1F0EB] rounded-md overflow-hidden p-0.5 border border-[#E4E2DB]">
                       <div
-                        className={`h-full rounded-lg transition-all duration-700 relative overflow-hidden shadow-lg ${
-                          canHandle 
-                            ? 'bg-gradient-to-r from-cyan-500 via-indigo-500 to-purple-600' 
-                            : 'bg-gradient-to-r from-slate-700 via-amber-700 to-amber-600 opacity-70'
+                        className={`h-full rounded-xs transition-all ${
+                          canHandle ? 'bg-[#4F46E5]' : 'bg-[#92928C]'
                         }`}
                         style={{ width: `${c.responsibility}%` }}
-                      >
-                        <div className="absolute inset-0 bg-[linear-gradient(45deg,rgba(255,255,255,0.15)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.15)_50%,rgba(255,255,255,0.15)_75%,transparent_75%,transparent)] bg-[length:1rem_1rem] opacity-30 animate-pulse-subtle" />
-                      </div>
+                      />
                     </div>
 
-                    {/* Responsibility Slider per Candidate */}
-                    <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
-                      <span>Adjust Responsibility Ownership %:</span>
+                    <div className="flex items-center justify-between text-[11px] text-[#92928C] pt-0.5">
+                      <span>Adjust ownership threshold:</span>
                       <div className="flex items-center space-x-2">
                         <input
                           type="range"
@@ -261,9 +223,9 @@ export default function MatrixDashboard({ candidates, setCandidates, selectedDif
                           step="5"
                           value={c.responsibility}
                           onChange={(e) => updateResponsibility(c.id, parseInt(e.target.value))}
-                          className="w-32 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+                          className="w-24 h-1 bg-[#F1F0EB] rounded-lg appearance-none cursor-pointer accent-[#4F46E5]"
                         />
-                        <span className="font-mono font-semibold text-slate-300">{c.responsibility}%</span>
+                        <span className="font-mono text-[#6B6B66]">{c.responsibility}%</span>
                       </div>
                     </div>
                   </div>
@@ -272,127 +234,60 @@ export default function MatrixDashboard({ candidates, setCandidates, selectedDif
             </div>
           </div>
 
-          {/* Right Summary Sidebar */}
+          {/* Right Insight Sidebar */}
           <div className="space-y-6">
-            <div className="glass-panel rounded-2xl p-6 border border-slate-800 space-y-4">
-              <h3 className="text-base font-bold text-white flex items-center space-x-2">
-                <Info className="w-4 h-4 text-cyan-400" />
-                <span>Matrix Rules & Insights</span>
+            <div className="bg-[#FFFFFF] rounded-xl p-5 border border-[#E4E2DB] shadow-[0_1px_2px_rgba(0,0,0,0.04)] space-y-3">
+              <h3 className="text-xs font-mono font-semibold text-[#92928C] uppercase tracking-wider">
+                Matrix Guidelines
               </h3>
 
-              <div className="space-y-3 text-xs text-slate-300 leading-relaxed">
-                <div className="p-3 rounded-xl bg-cyan-950/40 border border-cyan-500/20 space-y-1">
-                  <div className="font-bold text-cyan-300 flex items-center justify-between">
-                    <span>PERSON 1 (100% Responsibility)</span>
-                    <span className="text-[10px] bg-cyan-500/20 px-1.5 py-0.5 rounded text-cyan-400">Max L10</span>
-                  </div>
-                  <p className="text-slate-400 text-[11px]">
-                    Handles top tier system design & high risk mission-critical architecture. Full autonomy.
-                  </p>
+              <div className="space-y-2 text-xs text-[#6B6B66]">
+                <div className="p-2.5 rounded-md bg-[#FCFCFA] border border-[#E4E2DB] space-y-0.5">
+                  <div className="font-semibold text-[#1C1C1A]">100% Responsibility</div>
+                  <p className="text-[11px] text-[#92928C]">Top tier architecture & incidents (Max L10).</p>
                 </div>
-
-                <div className="p-3 rounded-xl bg-purple-950/40 border border-purple-500/20 space-y-1">
-                  <div className="font-bold text-purple-300 flex items-center justify-between">
-                    <span>PERSON 3 (75% Responsibility)</span>
-                    <span className="text-[10px] bg-purple-500/20 px-1.5 py-0.5 rounded text-purple-400">Max L8</span>
-                  </div>
-                  <p className="text-slate-400 text-[11px]">
-                    Solves complex features & services independently. Requires light senior review on core migrations.
-                  </p>
+                <div className="p-2.5 rounded-md bg-[#FCFCFA] border border-[#E4E2DB] space-y-0.5">
+                  <div className="font-semibold text-[#1C1C1A]">75% Responsibility</div>
+                  <p className="text-[11px] text-[#92928C]">Complex services independently (Max L8).</p>
                 </div>
-
-                <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/20 space-y-1">
-                  <div className="font-bold text-emerald-300 flex items-center justify-between">
-                    <span>PERSON 2 (60% Responsibility)</span>
-                    <span className="text-[10px] bg-emerald-500/20 px-1.5 py-0.5 rounded text-emerald-400">Max L6</span>
-                  </div>
-                  <p className="text-slate-400 text-[11px]">
-                    Delivers standard product features and modules with guided oversight and clear specifications.
-                  </p>
+                <div className="p-2.5 rounded-md bg-[#FCFCFA] border border-[#E4E2DB] space-y-0.5">
+                  <div className="font-semibold text-[#1C1C1A]">60% Responsibility</div>
+                  <p className="text-[11px] text-[#92928C]">Standard feature delivery (Max L6).</p>
                 </div>
               </div>
-            </div>
-
-            {/* Quick Status Card */}
-            <div className="glass-panel rounded-2xl p-6 border border-slate-800 space-y-3">
-              <h4 className="text-xs font-mono uppercase tracking-wider text-slate-400">Selected Level {selectedDifficulty} Readiness</h4>
-              {candidates.filter(c => c.maxDifficulty >= selectedDifficulty).length > 0 ? (
-                <div className="flex items-center space-x-2 text-emerald-400 text-sm font-semibold">
-                  <CheckCircle2 className="w-5 h-5" />
-                  <span>
-                    {candidates.filter(c => c.maxDifficulty >= selectedDifficulty).length} candidate(s) ready to lead
-                  </span>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-2 text-amber-400 text-sm font-semibold">
-                  <ShieldAlert className="w-5 h-5" />
-                  <span>No candidate has required L{selectedDifficulty} clearance</span>
-                </div>
-              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* 2D MATRIX SCATTER VIEW */}
+      {/* 2D SCATTER GRID */}
       {viewMode === 'matrix' && (
-        <div className="glass-panel rounded-2xl p-6 sm:p-8 border border-slate-800 space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-bold text-white">2D Responsibility vs. Difficulty Grid</h2>
-              <p className="text-xs text-slate-400">X-Axis: Difficulty Level (1 to 10) | Y-Axis: Responsibility Ownership % (0% to 100%)</p>
-            </div>
+        <div className="bg-[#FFFFFF] rounded-xl p-6 border border-[#E4E2DB] shadow-[0_1px_2px_rgba(0,0,0,0.04)] space-y-4">
+          <div className="text-xs font-mono font-semibold text-[#92928C] uppercase tracking-wider">
+            2D Responsibility vs. Difficulty Grid
           </div>
 
-          {/* Canvas Scatter Grid */}
-          <div className="relative w-full h-96 bg-slate-950/90 rounded-2xl border border-slate-800 p-8 bg-grid-pattern overflow-hidden">
-            {/* Axis Labels */}
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 -rotate-90 text-xs font-mono font-bold text-slate-400 tracking-wider">
+          <div className="relative w-full h-80 bg-[#FCFCFA] rounded-lg border border-[#E4E2DB] p-6 bg-grid-pattern-light overflow-hidden">
+            <div className="absolute left-2 top-1/2 -translate-y-1/2 -rotate-90 text-[10px] font-mono text-[#92928C]">
               RESPONSIBILITY % ↑
             </div>
-            <div className="absolute bottom-3 right-6 text-xs font-mono font-bold text-slate-400 tracking-wider">
+            <div className="absolute bottom-2 right-4 text-[10px] font-mono text-[#92928C]">
               DIFFICULTY LEVEL →
             </div>
 
-            {/* Grid Line Markers */}
-            <div className="absolute inset-x-12 inset-y-12 flex justify-between pointer-events-none opacity-20 border-b border-l border-slate-500">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(lvl => (
-                <div key={lvl} className="h-full border-r border-slate-600 relative">
-                  <span className="absolute bottom-[-22px] -left-2 text-[10px] font-mono text-slate-400">L{lvl}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Plot Points for Candidates */}
-            <div className="absolute inset-x-12 inset-y-12">
+            <div className="absolute inset-x-8 inset-y-8">
               {candidates.map((c) => {
                 const leftPercent = (c.maxDifficulty / 10) * 100;
                 const bottomPercent = c.responsibility;
-                const isSelected = c.maxDifficulty >= selectedDifficulty;
 
                 return (
                   <div
                     key={c.id}
-                    className="absolute -translate-x-1/2 translate-y-1/2 group cursor-pointer transition-all duration-500"
+                    className="absolute -translate-x-1/2 translate-y-1/2 group cursor-pointer"
                     style={{ left: `${leftPercent}%`, bottom: `${bottomPercent}%` }}
                   >
-                    {/* Glowing point marker */}
-                    <div className="relative flex items-center justify-center">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-extrabold text-xs text-white shadow-xl transition-transform group-hover:scale-125 ${
-                        isSelected ? 'bg-gradient-to-r from-cyan-500 to-indigo-600 ring-4 ring-cyan-500/30' : 'bg-slate-700 opacity-60'
-                      }`}>
-                        {c.name.split(' ')[1] || c.name[0]}
-                      </div>
-
-                      {/* Tooltip Card on Hover */}
-                      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-48 glass-panel p-3 rounded-xl border border-cyan-500/30 shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-30 space-y-1">
-                        <div className="font-bold text-xs text-white">{c.name}</div>
-                        <div className="text-[10px] text-cyan-400 font-mono">{c.role}</div>
-                        <div className="text-[10px] text-slate-300 flex justify-between pt-1 border-t border-slate-800">
-                          <span>Responsibility: <strong>{c.responsibility}%</strong></span>
-                          <span>Max Diff: <strong>L{c.maxDifficulty}</strong></span>
-                        </div>
-                      </div>
+                    <div className="w-7 h-7 rounded-md bg-[#4F46E5] text-[#FFFFFF] font-bold text-xs flex items-center justify-center shadow-xs">
+                      {c.name.split(' ')[1] || c.name[0]}
                     </div>
                   </div>
                 );
@@ -402,111 +297,73 @@ export default function MatrixDashboard({ candidates, setCandidates, selectedDif
         </div>
       )}
 
-      {/* TERMINAL ASCII MODE */}
+      {/* ASCII MODE */}
       {viewMode === 'ascii' && (
-        <div className="glass-panel rounded-2xl p-6 sm:p-8 border border-slate-800 space-y-4 font-mono">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 rounded-full bg-red-500/80" />
-              <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
-              <div className="w-3 h-3 rounded-full bg-green-500/80" />
-              <span className="text-xs text-slate-400 ml-2">intervue-ai-matrix-terminal --v2.4</span>
-            </div>
-            <span className="text-xs text-emerald-400">STATUS: LIVE ASCII RENDER</span>
-          </div>
-
-          <div className="bg-[#050811] p-6 rounded-xl border border-slate-800 overflow-x-auto text-emerald-400 leading-relaxed text-sm">
-            <pre className="select-none">
+        <div className="bg-[#FFFFFF] rounded-xl p-6 border border-[#E4E2DB] shadow-[0_1px_2px_rgba(0,0,0,0.04)] space-y-3 font-mono text-xs">
+          <div className="text-xs text-[#92928C] font-semibold uppercase tracking-wider">ASCII Render Mode</div>
+          <div className="bg-[#1C1C1A] text-[#EAF5EF] p-4 rounded-md overflow-x-auto leading-relaxed">
+            <pre>
 {`                 RESPONSIBILITY
                       ↑
-                      │
 ${candidates.map(c => {
   const barLength = Math.round((c.responsibility / 100) * 15);
   const barChars = '█'.repeat(barLength).padEnd(15, ' ');
   const pName = c.name.padEnd(9, ' ');
   return `        ${pName}  ${barChars}  ${c.responsibility}% (Max L${c.maxDifficulty})`;
 }).join('\n')}
-                      │
                       └────────────→
-                       Difficulty (Filter Active: Level ${selectedDifficulty})`}
+                       Difficulty Filter: L${selectedDifficulty}`}
             </pre>
           </div>
-
-          <p className="text-xs text-slate-400">
-            Prompt reproduction mode rendering exact ASCII structure with real-time reactive bar updates.
-          </p>
         </div>
       )}
 
-      {/* ADD CANDIDATE MODAL */}
+      {/* Add Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="glass-panel w-full max-w-md rounded-2xl p-6 border border-slate-800 space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-base font-bold text-white flex items-center space-x-2">
-                <UserPlus className="w-5 h-5 text-cyan-400" />
-                <span>Add Candidate to Matrix</span>
-              </h3>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="text-slate-400 hover:text-white text-lg font-bold"
-              >
-                ✕
-              </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1C1C1A]/40 backdrop-blur-xs">
+          <div className="bg-[#FFFFFF] w-full max-w-md rounded-xl p-6 border border-[#E4E2DB] shadow-lg space-y-4">
+            <div className="flex items-center justify-between border-b border-[#E4E2DB] pb-2">
+              <h3 className="text-sm font-semibold text-[#1C1C1A]">Add Candidate Profile</h3>
+              <button onClick={() => setShowAddModal(false)} className="text-[#92928C] hover:text-[#1C1C1A]">✕</button>
             </div>
 
-            <form onSubmit={handleAddCandidate} className="space-y-4 text-xs">
+            <form onSubmit={handleAddCandidate} className="space-y-3 text-xs">
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Candidate Name</label>
+                <label className="block text-[#6B6B66] mb-1">Candidate Name</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Person 4 or Alex Vance"
+                  placeholder="e.g. Person 4"
                   value={newCandidate.name}
                   onChange={(e) => setNewCandidate({ ...newCandidate, name: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-cyan-500"
+                  className="w-full bg-[#FCFCFA] border border-[#E4E2DB] rounded-md px-3 py-1.5 text-[#1C1C1A]"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Role / Specialization</label>
+                <label className="block text-[#6B6B66] mb-1">Role</label>
                 <input
                   type="text"
-                  placeholder="e.g. Lead Backend Engineer"
+                  placeholder="e.g. Software Engineer"
                   value={newCandidate.role}
                   onChange={(e) => setNewCandidate({ ...newCandidate, role: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-cyan-500"
+                  className="w-full bg-[#FCFCFA] border border-[#E4E2DB] rounded-md px-3 py-1.5 text-[#1C1C1A]"
                 />
               </div>
 
-              <div>
-                <label className="block text-slate-300 font-semibold mb-1">
-                  Initial Responsibility Ownership: <strong className="text-cyan-400">{newCandidate.responsibility}%</strong>
-                </label>
-                <input
-                  type="range"
-                  min="20"
-                  max="100"
-                  step="5"
-                  value={newCandidate.responsibility}
-                  onChange={(e) => setNewCandidate({ ...newCandidate, responsibility: e.target.value })}
-                  className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
-                />
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-2">
+              <div className="flex justify-end space-x-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 font-medium"
+                  className="px-3 py-1.5 rounded-md bg-[#F1F0EB] text-[#6B6B66]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold"
+                  className="px-3 py-1.5 rounded-md bg-[#4F46E5] text-[#FFFFFF] font-semibold"
                 >
-                  Add Profile
+                  Add Candidate
                 </button>
               </div>
             </form>

@@ -1,318 +1,413 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Bot, 
-  Sparkles, 
-  Code2, 
-  BrainCircuit, 
   CheckCircle2, 
-  RefreshCw, 
-  Trophy, 
-  HelpCircle,
-  Zap,
-  Award,
-  ChevronRight,
-  MessageSquareCode
+  Circle, 
+  ArrowRight, 
+  AlertCircle, 
+  RotateCcw, 
+  Loader2, 
+  BookOpen, 
+  TrendingUp, 
+  User, 
+  MessageSquare
 } from 'lucide-react';
 
-import confetti from 'canvas-confetti';
-import { QUESTION_BANK } from '../data/mockData';
+import Feedback from './Feedback';
 
-export default function AIInterviewer({ candidates, setCandidates }) {
-  const [selectedCandidateId, setSelectedCandidateId] = useState(candidates[0]?.id || 'person-1');
-  const [selectedQuestion, setSelectedQuestion] = useState(QUESTION_BANK[0]);
-  const [candidateCode, setCandidateCode] = useState(QUESTION_BANK[0].sampleSolution);
-  const [isEvaluating, setIsEvaluating] = useState(false);
-  const [evaluationResult, setEvaluationResult] = useState(null);
-  const [showHint, setShowHint] = useState(false);
+const CURRICULUM_DAYS = [
+  { day: 'Day 08', topic: 'Prompt Engineering' },
+  { day: 'Day 12', topic: 'RAG Architecture' },
+  { day: 'Day 17', topic: 'Vector Databases' },
+  { day: 'Day 22', topic: 'Agentic AI' },
+  { day: 'Day 26', topic: 'MCP' },
+];
 
-  const selectedCandidate = candidates.find(c => c.id === selectedCandidateId) || candidates[0];
+export default function AIInterviewer({
+  candidates,
+  interviewState,
+  onStartInterview,
+}) {
+  const {
+    sessionId,
+    candidateId,
+    status,
+    error,
+    currentQuestion,
+    currentTopic,
+    questionNumber,
+    totalQuestions,
+    topicsCovered,
+    coveredTopics,
+    conversationHistory,
+    feedback,
+    isSubmitting,
+    startSession,
+    sendAnswer,
+    retry,
+    resetSession,
+  } = interviewState;
 
-  const handleQuestionSelect = (q) => {
-    setSelectedQuestion(q);
-    setCandidateCode(q.sampleSolution);
-    setEvaluationResult(null);
-    setShowHint(false);
+  const [answerText, setAnswerText] = useState('');
+  const [selectedCandidateId, setSelectedCandidateId] = useState(candidateId || candidates[0]?.id || 'person-3');
+
+  useEffect(() => {
+    if (candidateId) {
+      setSelectedCandidateId(candidateId);
+    }
+  }, [candidateId]);
+
+  const activeCandidate = candidates.find(c => c.id === selectedCandidateId) || candidates[0];
+
+  const handleStart = () => {
+    startSession(selectedCandidateId);
   };
 
-  const handleEvaluate = () => {
-    setIsEvaluating(true);
-    setEvaluationResult(null);
-
-    setTimeout(() => {
-      setIsEvaluating(false);
-
-      // Algorithmic evaluation score calculation based on code length, key terms, difficulty
-      const codeLength = candidateCode.trim().length;
-      const difficultyFactor = selectedQuestion.difficulty;
-      
-      let score = 75;
-      if (codeLength > 100) score += 15;
-      if (candidateCode.includes('Map') || candidateCode.includes('redis') || candidateCode.includes('Architecture')) score += 10;
-      score = Math.min(100, Math.max(50, score));
-
-      // Calculate calculated responsibility impact
-      const newlyCalculatedResponsibility = Math.min(100, Math.round(score * (1 + (difficultyFactor / 20))));
-
-      const resultObj = {
-        score,
-        difficulty: selectedQuestion.difficulty,
-        calculatedResponsibility: newlyCalculatedResponsibility,
-        feedback: [
-          `Strong architectural grasp demonstrated for Level ${selectedQuestion.difficulty} task.`,
-          `Code complexity & state management aligned with ${newlyCalculatedResponsibility}% responsibility threshold.`,
-          `Handled key boundary cases and scalability tradeoffs effectively.`
-        ],
-        strengths: ['Algorithmic Efficiency', 'Clear Code Structure', 'High Responsibility Readiness'],
-      };
-
-      setEvaluationResult(resultObj);
-
-      // Trigger confetti celebration
-      try {
-        confetti({
-          particleCount: 80,
-          spread: 70,
-          origin: { y: 0.6 }
-        });
-      } catch (err) {
-        // ignore fallback
-      }
-
-      // Update candidate's responsibility rating if score is high
-      setCandidates(prev => prev.map(c => {
-        if (c.id === selectedCandidateId) {
-          const updatedResp = Math.min(100, Math.max(c.responsibility, newlyCalculatedResponsibility));
-          return {
-            ...c,
-            responsibility: updatedResp,
-            maxDifficulty: Math.max(c.maxDifficulty, Math.round(updatedResp / 10)),
-            evaluatedTasks: c.evaluatedTasks + 1
-          };
-        }
-        return c;
-      }));
-    }, 1500);
+  const handleSubmit = (e) => {
+    if (e) e.preventDefault();
+    if (!answerText.trim() || isSubmitting) return;
+    sendAnswer(answerText);
+    setAnswerText('');
   };
 
-  return (
-    <div className="space-y-8">
-      {/* Header Banner */}
-      <div className="glass-panel rounded-2xl p-6 sm:p-8 border border-slate-800 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-        <div className="space-y-2 max-w-2xl">
-          <div className="flex items-center space-x-2 text-xs font-mono font-semibold text-indigo-400 uppercase tracking-widest">
-            <Bot className="w-4 h-4" />
-            <span>AI Evaluation Engine</span>
+  const handleKeyDown = (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      handleSubmit(e);
+    }
+  };
+
+  const isFollowUp = conversationHistory.length > 2 && questionNumber > 1;
+
+  // Render Completed / Final Assessment Report
+  if (status === 'completed' && feedback) {
+    return (
+      <div className="space-y-6 max-w-4xl mx-auto">
+        <Feedback
+          feedback={feedback}
+          questionCount={questionNumber}
+          topicsCovered={topicsCovered}
+          coveredTopics={coveredTopics}
+        />
+
+        {/* Conversation Transcript Review */}
+        {conversationHistory.length > 0 && (
+          <div className="bg-[#FFFFFF] rounded-xl border border-[#E4E2DB] p-6 space-y-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+            <h3 className="text-xs font-mono font-semibold text-[#92928C] uppercase tracking-wider">
+              Interview Transcript & Evaluation Record
+            </h3>
+
+            <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+              {conversationHistory.map((msg, idx) => {
+                const isAI = msg.role === 'interviewer';
+                return (
+                  <div
+                    key={idx}
+                    className={`p-3.5 rounded-lg border text-xs leading-relaxed ${
+                      isAI
+                        ? 'bg-[#FCFCFA] border-[#E4E2DB] text-[#1C1C1A]'
+                        : 'bg-[#EEF0FF] border-[#D9E0FF] text-[#1C1C1A] ml-6'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between font-mono text-[10px] text-[#92928C] mb-1">
+                      <span className="font-semibold uppercase">
+                        {isAI ? 'AI Interviewer' : 'Candidate'}
+                      </span>
+                      {msg.topic && <span>{msg.topic}</span>}
+                    </div>
+                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            AI Technical Interview Simulator
-          </h1>
-          <p className="text-sm text-slate-300 leading-relaxed">
-            Conduct adaptive technical interviews scaled by difficulty. Evaluate code solutions, system architecture strategies, 
-            and automatically calibrate candidate Responsibility Scores.
-          </p>
+        )}
+
+        <div className="text-center pt-2">
+          <button
+            onClick={resetSession}
+            className="inline-flex items-center space-x-2 px-4 py-2 rounded-md font-medium text-xs bg-[#FFFFFF] border border-[#E4E2DB] text-[#1C1C1A] hover:bg-[#F7F6F2] transition-colors cursor-pointer"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-[#6B6B66]" />
+            <span>Start New Interview</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Render Setup / Start State
+  if (status === 'idle') {
+    return (
+      <div className="space-y-6 max-w-4xl mx-auto">
+        <div className="bg-[#FFFFFF] rounded-xl p-6 md:p-8 border border-[#E4E2DB] shadow-[0_1px_2px_rgba(0,0,0,0.04)] space-y-6">
+          <div className="space-y-1">
+            <span className="text-xs font-mono text-[#4F46E5] font-medium uppercase tracking-wider">
+              Technical Interview Room
+            </span>
+            <h1 className="text-2xl font-semibold text-[#1C1C1A]">
+              Personalized AI Technical Interviewer
+            </h1>
+            <p className="text-xs text-[#6B6B66] leading-relaxed max-w-xl">
+              Conduct a multi-turn technical interview. The AI interviewer assesses system design reasoning, 
+              asks context-aware follow-ups, and provides structured evaluation feedback.
+            </p>
+          </div>
+
+          <div className="pt-4 border-t border-[#E4E2DB] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="space-y-1 w-full sm:w-auto">
+              <label className="text-xs font-semibold text-[#92928C] block uppercase tracking-wider">
+                Target Interviewee
+              </label>
+              <select
+                value={selectedCandidateId}
+                onChange={(e) => setSelectedCandidateId(e.target.value)}
+                className="bg-[#FCFCFA] border border-[#E4E2DB] text-[#1C1C1A] text-xs font-medium rounded-md px-3 py-2 focus:outline-none focus:border-[#4F46E5]"
+              >
+                {candidates.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} — {c.role} ({c.responsibility}% Ownership)
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              onClick={handleStart}
+              className="flex items-center space-x-2 px-5 py-2.5 rounded-md bg-[#4F46E5] hover:bg-[#4338CA] text-[#FFFFFF] font-semibold text-xs transition-colors cursor-pointer"
+            >
+              <span>Start Interview</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Render Main Interview Screen (Screen 2 Editorial Room)
+  return (
+    <div className="space-y-6 max-w-5xl mx-auto">
+      {/* Top Header */}
+      <div className="flex items-center justify-between pb-3 border-b border-[#E4E2DB]">
+        <div className="flex items-center space-x-3">
+          <span className="font-semibold text-sm text-[#1C1C1A] font-mono">
+            INTERVUE
+          </span>
+          <span className="text-xs text-[#92928C]">|</span>
+          <span className="text-xs text-[#6B6B66]">
+            Interviewee: <strong>{activeCandidate.name}</strong> ({activeCandidate.id})
+          </span>
         </div>
 
-        {/* Candidate Selector Pill */}
-        <div className="w-full lg:w-auto bg-slate-900/90 p-3 rounded-2xl border border-slate-800 space-y-2">
-          <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-            Target Interviewee:
-          </label>
-          <select
-            value={selectedCandidateId}
-            onChange={(e) => setSelectedCandidateId(e.target.value)}
-            className="w-full bg-slate-950 border border-slate-700 text-white font-bold rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-cyan-500"
-          >
-            {candidates.map(c => (
-              <option key={c.id} value={c.id}>
-                {c.name} — Current Ownership: {c.responsibility}% (Max L{c.maxDifficulty})
-              </option>
-            ))}
-          </select>
+        <div className="flex items-center space-x-3 text-xs font-mono">
+          <span className="text-[#6B6B66]">
+            Question <strong className="text-[#1C1C1A]">0{questionNumber}</strong> / 08+
+          </span>
+          <span className="inline-flex items-center space-x-1.5 px-2 py-0.5 rounded bg-[#EAF5EF] text-[#2F7D5A] text-[11px] font-medium border border-[#D1EADE]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#2F7D5A]" />
+            <span>LIVE</span>
+          </span>
         </div>
       </div>
 
       {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left: Question Selector Panel */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center space-x-2">
-            <BrainCircuit className="w-4 h-4 text-cyan-400" />
-            <span>Select Interview Question</span>
-          </h3>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        
+        {/* Left Sidebar: Compact Progress & Curriculum */}
+        <div className="md:col-span-1 space-y-6">
+          {/* Question Progress */}
+          <div className="space-y-2">
+            <div className="text-[11px] font-mono font-semibold text-[#92928C] uppercase tracking-wider">
+              Interview Progress
+            </div>
 
-          <div className="space-y-3">
-            {QUESTION_BANK.map((q) => {
-              const isSelected = selectedQuestion.id === q.id;
-              return (
-                <div
-                  key={q.id}
-                  onClick={() => handleQuestionSelect(q)}
-                  className={`cursor-pointer p-4 rounded-xl transition-all border ${
-                    isSelected
-                      ? 'glass-panel-glow border-cyan-500/50 bg-cyan-950/20'
-                      : 'glass-panel border-slate-800/80 hover:border-slate-700'
-                  }`}
-                >
-                  <div className="flex items-center justify-between text-xs mb-1.5">
-                    <span className="font-semibold text-slate-400">{q.category}</span>
-                    <span className="font-mono font-bold px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                      Difficulty L{q.difficulty}
+            <div className="space-y-1 text-xs">
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((qNum) => {
+                const isDone = qNum < questionNumber;
+                const isCurrent = qNum === questionNumber;
+
+                return (
+                  <div
+                    key={qNum}
+                    className={`flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs ${
+                      isCurrent
+                        ? 'bg-[#EEF0FF] text-[#4F46E5] font-semibold border border-[#D9E0FF]'
+                        : isDone
+                        ? 'text-[#2F7D5A]'
+                        : 'text-[#92928C]'
+                    }`}
+                  >
+                    <span className="flex items-center space-x-2">
+                      <span>{isDone ? '✓' : isCurrent ? '●' : '○'}</span>
+                      <span>Question 0{qNum}</span>
                     </span>
                   </div>
-                  <h4 className="text-sm font-bold text-white flex items-center justify-between">
-                    <span>{q.title}</span>
-                    <ChevronRight className={`w-4 h-4 transition-transform ${isSelected ? 'rotate-90 text-cyan-400' : 'text-slate-500'}`} />
-                  </h4>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
 
-          {/* Current Candidate Card Mini */}
-          <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-3">
-            <h4 className="text-xs font-mono uppercase text-slate-400">Assessed Profile</h4>
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-bold text-white text-base">{selectedCandidate?.name}</div>
-                <div className="text-xs text-slate-400">{selectedCandidate?.role}</div>
-              </div>
-              <div className="text-right">
-                <div className="text-xs text-slate-400">Current Score</div>
-                <div className="text-lg font-extrabold text-cyan-400">{selectedCandidate?.responsibility}%</div>
-              </div>
+          {/* Curriculum Coverage */}
+          <div className="space-y-2 pt-4 border-t border-[#E4E2DB]">
+            <div className="text-[11px] font-mono font-semibold text-[#92928C] uppercase tracking-wider">
+              Curriculum Coverage
+            </div>
+
+            <div className="space-y-1.5 text-xs">
+              {CURRICULUM_DAYS.map((c, i) => {
+                const isCovered = coveredTopics.some(t => t.toLowerCase().includes(c.topic.toLowerCase().split(' ')[0]));
+                const isCurrentTopic = currentTopic.toLowerCase().includes(c.topic.toLowerCase().split(' ')[0]);
+
+                return (
+                  <div
+                    key={i}
+                    className={`flex items-center justify-between px-2.5 py-1 rounded-md text-xs ${
+                      isCurrentTopic
+                        ? 'text-[#4F46E5] font-semibold bg-[#EEF0FF]'
+                        : isCovered
+                        ? 'text-[#2F7D5A]'
+                        : 'text-[#92928C]'
+                    }`}
+                  >
+                    <span className="flex items-center space-x-2">
+                      <span>{isCovered ? '✓' : isCurrentTopic ? '●' : '○'}</span>
+                      <span>{c.topic}</span>
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
 
-        {/* Right 2-Cols: Interview Editor & AI Workspace */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="glass-panel rounded-2xl p-6 border border-slate-800 space-y-5">
-            {/* Question Header */}
-            <div className="border-b border-slate-800 pb-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono font-bold text-indigo-400">{selectedQuestion.levelLabel}</span>
-                <button
-                  onClick={() => setShowHint(!showHint)}
-                  className="flex items-center space-x-1 text-xs text-cyan-400 hover:underline"
-                >
-                  <HelpCircle className="w-3.5 h-3.5" />
-                  <span>{showHint ? 'Hide Hints' : 'View Architectural Hints'}</span>
-                </button>
-              </div>
+        {/* Right Workspace: Editorial Interview Presentation */}
+        <div className="md:col-span-3 space-y-6">
 
-              <h2 className="text-xl font-bold text-white">{selectedQuestion.title}</h2>
-              <p className="text-xs text-slate-300 leading-relaxed bg-slate-900/60 p-3.5 rounded-xl border border-slate-800 font-mono">
-                {selectedQuestion.scenario}
-              </p>
+          {/* Question Card (Editorial Presentation) */}
+          <div className="bg-[#FFFFFF] rounded-xl p-6 border border-[#E4E2DB] shadow-[0_1px_2px_rgba(0,0,0,0.04)] space-y-4">
+            <div className="flex items-center justify-between border-b border-[#E4E2DB] pb-3">
+              <span className="text-xs font-mono font-semibold text-[#92928C] uppercase tracking-wider">
+                AI INTERVIEWER
+              </span>
 
-              {showHint && (
-                <div className="p-3 rounded-xl bg-indigo-950/40 border border-indigo-500/30 text-xs text-indigo-200 space-y-1">
-                  <span className="font-bold">Architectural Guidance:</span>
-                  <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-300">
-                    {selectedQuestion.hints.map((h, idx) => (
-                      <li key={idx}>{h}</li>
-                    ))}
-                  </ul>
-                </div>
+              {currentTopic && (
+                <span className="text-xs font-mono text-[#6B6B66] bg-[#F1F0EB] px-2.5 py-1 rounded-md border border-[#E4E2DB]">
+                  {currentTopic}
+                </span>
               )}
             </div>
 
-            {/* Code / Solution Editor */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs text-slate-400">
-                <span className="flex items-center space-x-1.5 font-mono">
-                  <Code2 className="w-4 h-4 text-cyan-400" />
-                  <span>Candidate Response & Solution Draft:</span>
-                </span>
-                <span className="font-mono text-[10px]">JavaScript / Pseudo System Code</span>
+            {/* Follow-up Indicator (Subtle Left Accent Line) */}
+            {isFollowUp && (
+              <div className="pl-3 border-l-2 border-[#4F46E5] space-y-0.5">
+                <div className="text-[11px] font-mono font-semibold text-[#4F46E5] uppercase tracking-wider">
+                  FOLLOW-UP
+                </div>
+                <div className="text-xs text-[#6B6B66]">
+                  Based on your previous answer
+                </div>
+              </div>
+            )}
+
+            {/* Question Text */}
+            <div className="text-[#1C1C1A] text-base leading-relaxed font-normal pt-1">
+              <p className="whitespace-pre-wrap">{currentQuestion || 'Generating question…'}</p>
+            </div>
+          </div>
+
+          {/* Multi-Turn Timeline (Past turns) */}
+          {conversationHistory.length > 2 && (
+            <div className="space-y-2 pt-2">
+              <div className="text-xs font-mono text-[#92928C] uppercase tracking-wider">
+                Previous Turns
               </div>
 
-              <textarea
-                rows={10}
-                value={candidateCode}
-                onChange={(e) => setCandidateCode(e.target.value)}
-                className="w-full bg-[#070b14] border border-slate-800 rounded-xl p-4 text-xs font-mono text-cyan-200 focus:outline-none focus:border-cyan-500/60 leading-relaxed shadow-inner"
-              />
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                {conversationHistory.slice(0, -1).map((msg, i) => {
+                  const isAI = msg.role === 'interviewer';
+                  return (
+                    <div
+                      key={i}
+                      className={`p-3 rounded-md border text-xs leading-relaxed ${
+                        isAI
+                          ? 'bg-[#FCFCFA] border-[#E4E2DB] text-[#6B6B66]'
+                          : 'bg-[#EEF0FF] border-[#D9E0FF] text-[#1C1C1A]'
+                      }`}
+                    >
+                      <div className="text-[10px] font-mono text-[#92928C] mb-1">
+                        {isAI ? 'AI Interviewer' : 'You'}
+                      </div>
+                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Response Textarea */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-xs text-[#6B6B66]">
+              <label htmlFor="user-response-input" className="font-semibold uppercase tracking-wider text-[11px] text-[#92928C]">
+                YOUR RESPONSE
+              </label>
+              <span className="font-mono text-[11px] text-[#92928C]">
+                {answerText.length} characters
+              </span>
             </div>
 
-            {/* Submit & AI Evaluate Button */}
-            <div className="flex items-center justify-between pt-2">
-              <button
-                onClick={() => setCandidateCode(selectedQuestion.sampleSolution)}
-                className="flex items-center space-x-1 text-xs text-slate-400 hover:text-slate-200"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>Reset Default Solution</span>
-              </button>
+            <textarea
+              id="user-response-input"
+              rows={5}
+              value={answerText}
+              onChange={(e) => setAnswerText(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={isSubmitting || !currentQuestion}
+              placeholder="Type your technical answer here..."
+              className="w-full bg-[#FFFFFF] border border-[#E4E2DB] rounded-md p-4 text-xs font-mono text-[#1C1C1A] focus:outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#EEF0FF] leading-relaxed resize-none placeholder:text-[#92928C] disabled:opacity-50 transition-colors shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+            />
+
+            {/* Error banner */}
+            {error && (
+              <div className="flex items-center justify-between p-3 rounded-md bg-[#FCECEC] border border-[#F8CACA] text-[#B54747] text-xs">
+                <div className="flex items-center space-x-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{error}</span>
+                </div>
+                <button
+                  onClick={retry}
+                  className="px-3 py-1 rounded bg-[#B54747] text-[#FFFFFF] font-medium text-xs hover:bg-[#9B3C3C]"
+                >
+                  Try again
+                </button>
+              </div>
+            )}
+
+            {/* Submit Action Bar */}
+            <div className="flex items-center justify-between pt-1">
+              <span className="text-[11px] text-[#92928C]">
+                Ctrl + Enter to submit
+              </span>
 
               <button
-                onClick={handleEvaluate}
-                disabled={isEvaluating}
-                className="flex items-center space-x-2 px-6 py-2.5 rounded-xl font-bold text-xs bg-gradient-to-r from-cyan-500 via-indigo-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-slate-950 shadow-lg shadow-indigo-500/25 transition-all"
+                onClick={handleSubmit}
+                disabled={!answerText.trim() || isSubmitting || !currentQuestion}
+                className="flex items-center space-x-2 px-5 py-2.5 rounded-md bg-[#4F46E5] hover:bg-[#4338CA] text-[#FFFFFF] font-semibold text-xs transition-colors disabled:opacity-40 cursor-pointer"
               >
-                {isEvaluating ? (
+                {isSubmitting ? (
                   <>
-                    <Sparkles className="w-4 h-4 animate-spin" />
-                    <span>Evaluating Response...</span>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Evaluating response…</span>
                   </>
                 ) : (
                   <>
-                    <Zap className="w-4 h-4" />
-                    <span>Run AI Evaluation & Score</span>
+                    <span>Submit Answer →</span>
                   </>
                 )}
               </button>
             </div>
           </div>
 
-          {/* AI EVALUATION RESULT MODAL / CARD */}
-          {evaluationResult && (
-            <div className="glass-panel-glow rounded-2xl p-6 border border-cyan-500/40 space-y-4 animate-fadeIn">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                <div className="flex items-center space-x-2">
-                  <Award className="w-6 h-6 text-cyan-400" />
-                  <div>
-                    <h3 className="text-base font-bold text-white">AI Evaluation Summary Report</h3>
-                    <p className="text-xs text-slate-400">Assessed against Difficulty Level {evaluationResult.difficulty}</p>
-                  </div>
-                </div>
-
-                <div className="text-right">
-                  <div className="text-[10px] text-slate-400 font-mono">NEW RESPONSIBILITY SCORE</div>
-                  <div className="text-2xl font-extrabold text-cyan-400">{evaluationResult.calculatedResponsibility}%</div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1.5">
-                  <div className="font-bold text-slate-200">Evaluation Points:</div>
-                  <ul className="space-y-1 text-slate-300 text-[11px]">
-                    {evaluationResult.feedback.map((f, i) => (
-                      <li key={i} className="flex items-start space-x-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                        <span>{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1.5">
-                  <div className="font-bold text-slate-200">Validated Competencies:</div>
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {evaluationResult.strengths.map((s, i) => (
-                      <span key={i} className="px-2 py-1 rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-[10px] font-semibold">
-                        {s}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <p className="text-[11px] text-slate-400 italic">
-                Candidate matrix status for <strong>{selectedCandidate.name}</strong> automatically updated to {evaluationResult.calculatedResponsibility}%.
-              </p>
-            </div>
-          )}
         </div>
       </div>
     </div>

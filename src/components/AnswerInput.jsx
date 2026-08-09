@@ -13,7 +13,6 @@ export default function AnswerInput({ onSubmit, isLoading, disabled }) {
   };
 
   const handleKeyDown = (e) => {
-    // Ctrl+Enter / Cmd+Enter to submit
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       handleSubmit(e);
     }
@@ -21,43 +20,46 @@ export default function AnswerInput({ onSubmit, isLoading, disabled }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      <div className="relative">
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between text-xs text-[#6B6B66]">
+          <label htmlFor="answer-input" className="font-mono text-[11px] text-[#92928C] uppercase tracking-wider">
+            YOUR RESPONSE
+          </label>
+          <span className="font-mono text-[11px] text-[#92928C]">
+            {answer.length} characters
+          </span>
+        </div>
+
         <textarea
           id="answer-input"
-          rows={4}
+          rows={5}
           value={answer}
           onChange={(e) => setAnswer(e.target.value)}
           onKeyDown={handleKeyDown}
           disabled={isLoading || disabled}
-          placeholder="Type your answer here… (Ctrl+Enter to submit)"
-          className="w-full bg-[#070b14] border border-slate-800 rounded-xl p-4 pr-12 text-sm text-slate-100 focus:outline-none focus:border-cyan-500/60 leading-relaxed shadow-inner resize-none placeholder:text-slate-600 disabled:opacity-50 transition-colors"
+          placeholder="Type your technical answer here..."
+          className="w-full bg-[#FFFFFF] border border-[#E4E2DB] rounded-md p-4 text-xs font-mono text-[#1C1C1A] focus:outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#EEF0FF] leading-relaxed resize-none placeholder:text-[#92928C] disabled:opacity-50 transition-colors shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
         />
-
-        {/* Character count */}
-        <div className="absolute bottom-3 right-3 text-[10px] font-mono text-slate-600">
-          {answer.length}
-        </div>
       </div>
 
       <div className="flex items-center justify-between">
-        <p className="text-[10px] text-slate-500">
-          Press <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono text-[9px]">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono text-[9px]">Enter</kbd> to submit
-        </p>
+        <span className="text-[11px] text-[#92928C]">
+          Ctrl + Enter to submit
+        </span>
 
         <button
           type="submit"
           disabled={!answer.trim() || isLoading || disabled}
-          className="flex items-center space-x-2 px-5 py-2.5 rounded-xl font-bold text-xs bg-gradient-to-r from-cyan-500 via-indigo-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-slate-950 shadow-lg shadow-indigo-500/25 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:from-cyan-500 disabled:hover:to-purple-600"
+          className="flex items-center space-x-2 px-5 py-2.5 rounded-md bg-[#4F46E5] hover:bg-[#4338CA] text-[#FFFFFF] font-semibold text-xs transition-colors disabled:opacity-40 cursor-pointer"
         >
           {isLoading ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Processing…</span>
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <span>Evaluating response…</span>
             </>
           ) : (
             <>
-              <Send className="w-4 h-4" />
-              <span>Submit Answer</span>
+              <span>Submit Answer →</span>
             </>
           )}
         </button>

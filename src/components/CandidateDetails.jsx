@@ -1,38 +1,44 @@
 import React, { useState } from 'react';
 import { 
-  Users, 
-  Award, 
-  ShieldCheck, 
-  Activity, 
-  FileText, 
   Download, 
-  Sparkles,
-  CheckCircle2,
-  TrendingUp,
-  BrainCircuit,
-  BarChart2
+  CheckCircle2, 
+  ArrowRight
 } from 'lucide-react';
 
-export default function CandidateDetails({ candidates }) {
+const CURRICULUM_FOCUS_AREAS = [
+  { name: 'RAG Architecture', day: 'Day 12' },
+  { name: 'Vector Databases', day: 'Day 17' },
+  { name: 'Prompt Engineering', day: 'Day 08' },
+  { name: 'Agentic AI', day: 'Day 22' },
+  { name: 'MCP (Model Context Protocol)', day: 'Day 26' },
+  { name: 'AI Deployment', day: 'Day 29' },
+  { name: 'Production AI Systems', day: 'Day 30' },
+];
+
+export default function CandidateDetails({ candidates, onStartInterview }) {
   const [selectedCandidate, setSelectedCandidate] = useState(candidates[0]);
   const [exportMessage, setExportMessage] = useState(null);
 
   const handleExportReport = () => {
     const reportData = {
       timestamp: new Date().toISOString(),
+      candidateId: selectedCandidate.id,
       candidateName: selectedCandidate.name,
       role: selectedCandidate.role,
+      cohort: 'Cohort 2026-A (AI Engineering)',
+      completedMissions: '24 missions completed',
+      learningProgress: '78% learning progress',
       responsibilityScore: `${selectedCandidate.responsibility}%`,
       maxSafeDifficulty: `Level ${selectedCandidate.maxDifficulty}`,
       skills: selectedCandidate.skills,
-      evaluationSummary: 'Evaluated under Intervue AI Responsibility vs Difficulty Framework v2.4'
+      teamMembers: ['Vivek Maheshwari', 'Aayush Malhotra', 'Manav Lathiya']
     };
 
     const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${selectedCandidate.name.replace(/\s+/g, '_')}_Responsibility_Report.json`;
+    a.download = `${selectedCandidate.name.replace(/\s+/g, '_')}_Candidate_Profile.json`;
     a.click();
 
     setExportMessage(`Exported audit report for ${selectedCandidate.name}`);
@@ -40,153 +46,143 @@ export default function CandidateDetails({ candidates }) {
   };
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="glass-panel rounded-2xl p-6 sm:p-8 border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="space-y-2">
-          <div className="flex items-center space-x-2 text-xs font-mono font-semibold text-purple-400 uppercase tracking-widest">
-            <Users className="w-4 h-4" />
-            <span>Profile Benchmarks & Audit Trail</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            Candidate Competency Profiler
-          </h1>
-          <p className="text-sm text-slate-300 max-w-2xl leading-relaxed">
-            In-depth evaluation matrix detailing technical mastery, autonomous ownership, crisis recovery, and task history.
-          </p>
-        </div>
-
-        <button
-          onClick={handleExportReport}
-          className="flex items-center space-x-2 px-5 py-2.5 rounded-xl font-bold text-xs bg-slate-900 hover:bg-slate-800 border border-slate-700 text-cyan-300 shadow-md transition-all"
-        >
-          <Download className="w-4 h-4 text-cyan-400" />
-          <span>Export JSON Audit Report</span>
-        </button>
+    <div className="space-y-8 max-w-4xl mx-auto">
+      {/* Page Header */}
+      <div className="space-y-1 pb-4 border-b border-[#E4E2DB]">
+        <h1 className="text-2xl font-semibold text-[#1C1C1A] tracking-tight">
+          Technical Interview
+        </h1>
+        <p className="text-sm text-[#686862]">
+          Personalized to your AI Cohort journey.
+        </p>
       </div>
 
       {exportMessage && (
-        <div className="p-3 rounded-xl bg-cyan-950/60 border border-cyan-500/40 text-cyan-300 text-xs font-semibold flex items-center space-x-2 animate-fadeIn">
+        <div className="p-3 rounded-md bg-[#EAF5EF] border border-[#D1EADE] text-[#2F7D5A] text-xs font-medium flex items-center space-x-2">
           <CheckCircle2 className="w-4 h-4" />
           <span>{exportMessage}</span>
         </div>
       )}
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Candidate List */}
+      {/* Main Container */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* Left: Candidate Selector */}
         <div className="space-y-3">
-          <h3 className="text-xs font-mono uppercase text-slate-400 tracking-wider">Loaded Matrix Profiles</h3>
+          <div className="text-xs font-semibold text-[#96968F] uppercase tracking-wider">
+            Candidate Roster
+          </div>
 
-          {candidates.map((c) => {
-            const isSelected = selectedCandidate.id === c.id;
-            return (
-              <div
-                key={c.id}
-                onClick={() => setSelectedCandidate(c)}
-                className={`cursor-pointer p-4 rounded-xl border transition-all space-y-3 ${
-                  isSelected
-                    ? 'glass-panel-glow border-cyan-500/50 bg-cyan-950/20'
-                    : 'glass-panel border-slate-800 hover:border-slate-700'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="font-bold text-white text-base">{c.name}</div>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${c.badgeColor}`}>
-                    {c.responsibility}% Resp
-                  </span>
+          <div className="space-y-2">
+            {candidates.map((c) => {
+              const isSelected = selectedCandidate.id === c.id;
+              return (
+                <div
+                  key={c.id}
+                  onClick={() => setSelectedCandidate(c)}
+                  className={`cursor-pointer p-3.5 rounded-lg border transition-all ${
+                    isSelected
+                      ? 'bg-[#FFFFFF] border-[#4F46E5] shadow-[0_1px_3px_rgba(0,0,0,0.06)]'
+                      : 'bg-[#FCFCFA] border-[#E4E2DB] hover:border-[#D7D5CD]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="font-semibold text-[#1C1C1A] text-sm">{c.name}</div>
+                    <span className="text-xs font-mono text-[#686862]">{c.responsibility}%</span>
+                  </div>
+                  <div className="text-xs text-[#686862] mt-0.5">{c.role}</div>
                 </div>
-                <div className="text-xs text-slate-400">{c.role}</div>
+              );
+            })}
+          </div>
 
-                {/* Mini skill bar preview */}
-                <div className="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-cyan-500 to-purple-500"
-                    style={{ width: `${c.responsibility}%` }}
-                  />
-                </div>
-              </div>
-            );
-          })}
+          <button
+            onClick={handleExportReport}
+            className="w-full mt-4 flex items-center justify-center space-x-2 py-2 px-3 rounded-md text-xs font-medium bg-[#FFFFFF] border border-[#E4E2DB] text-[#1C1C1A] hover:bg-[#F7F6F2] transition-colors cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5 text-[#686862]" />
+            <span>Export Profile JSON</span>
+          </button>
         </div>
 
-        {/* Right 2-Cols: Detailed Breakdown */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="glass-panel rounded-2xl p-6 sm:p-8 border border-slate-800 space-y-6">
-            {/* Header Profile Info */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
-              <div className="space-y-1">
-                <div className="flex items-center space-x-3">
-                  <h2 className="text-2xl font-extrabold text-white">{selectedCandidate.name}</h2>
-                  <span className={`px-3 py-1 rounded-full text-xs font-extrabold border ${selectedCandidate.badgeColor}`}>
-                    Max Difficulty L{selectedCandidate.maxDifficulty}
-                  </span>
-                </div>
-                <p className="text-xs text-cyan-400 font-mono">{selectedCandidate.role}</p>
-              </div>
-
-              <div className="text-left sm:text-right font-mono bg-slate-900 px-4 py-2 rounded-xl border border-slate-800">
-                <div className="text-[10px] text-slate-400">RESPONSIBILITY THRESHOLD</div>
-                <div className="text-2xl font-black text-cyan-400">{selectedCandidate.responsibility}%</div>
-              </div>
+        {/* Right 2-Cols: Candidate Overview Profile */}
+        <div className="md:col-span-2 space-y-6 bg-[#FFFFFF] p-6 rounded-xl border border-[#E4E2DB] shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+          {/* Candidate Profile Header */}
+          <div className="flex items-start justify-between pb-5 border-b border-[#E4E2DB]">
+            <div className="space-y-1">
+              <span className="text-xs font-mono text-[#96968F]">CANDIDATE</span>
+              <h2 className="text-xl font-semibold text-[#1C1C1A]">{selectedCandidate.name}</h2>
+              <p className="text-xs text-[#686862]">AI Cohort Candidate · {selectedCandidate.role}</p>
             </div>
 
-            {/* Bio */}
-            <p className="text-xs text-slate-300 leading-relaxed bg-slate-900/60 p-4 rounded-xl border border-slate-800 font-sans">
-              {selectedCandidate.bio}
-            </p>
+            <div className="text-right">
+              <span className="text-xs text-[#96968F] block font-mono">Responsibility Ownership</span>
+              <span className="text-lg font-bold text-[#4F46E5] font-mono">{selectedCandidate.responsibility}%</span>
+              <span className="text-xs text-[#686862] block font-mono">Max Difficulty L{selectedCandidate.maxDifficulty}</span>
+            </div>
+          </div>
 
-            {/* Competencies Progress Breakdown */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold text-white flex items-center space-x-2">
-                <BarChart2 className="w-4 h-4 text-cyan-400" />
-                <span>Core Skill Matrix (0 - 100 Scale)</span>
-              </h3>
-
-              <div className="space-y-4">
-                {Object.entries(selectedCandidate.skills).map(([skillKey, score]) => {
-                  const formattedName = skillKey
-                    .replace(/([A-Z])/g, ' $1')
-                    .replace(/^./, str => str.toUpperCase());
-
-                  return (
-                    <div key={skillKey} className="space-y-1.5 text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-slate-300">{formattedName}</span>
-                        <span className="font-mono font-bold text-cyan-400">{score} / 100</span>
-                      </div>
-                      <div className="w-full h-3 bg-slate-900 rounded-lg p-0.5 border border-slate-800">
-                        <div
-                          className="h-full rounded-md bg-gradient-to-r from-cyan-500 via-indigo-500 to-purple-600 transition-all duration-500"
-                          style={{ width: `${score}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+          {/* Learning Progress Metrics */}
+          <div className="grid grid-cols-3 gap-4 py-2 border-b border-[#E4E2DB]">
+            <div>
+              <div className="text-xs text-[#96968F]">Cohort Info</div>
+              <div className="text-sm font-semibold text-[#1C1C1A] mt-0.5">Cohort 2026-A</div>
+              <div className="text-xs text-[#686862]">AI Engineering</div>
             </div>
 
-            {/* Evaluation Stats Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-2">
-              <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1">
-                <div className="text-[10px] font-mono text-slate-400">EVALUATED TASKS</div>
-                <div className="text-xl font-bold text-white">{selectedCandidate.evaluatedTasks} Tasks</div>
-              </div>
+            <div>
+              <div className="text-xs text-[#96968F]">Completed Missions</div>
+              <div className="text-sm font-semibold text-[#1C1C1A] mt-0.5">24 missions</div>
+              <div className="text-xs text-[#2F7D5A]">Completed</div>
+            </div>
 
-              <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1">
-                <div className="text-[10px] font-mono text-slate-400">SUCCESS RATE</div>
-                <div className="text-xl font-bold text-emerald-400">{selectedCandidate.successRate}%</div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1 col-span-2 sm:col-span-1">
-                <div className="text-[10px] font-mono text-slate-400">AUTONOMY TIER</div>
-                <div className="text-xl font-bold text-indigo-400">
-                  {selectedCandidate.responsibility >= 90 ? 'Full Lead' : selectedCandidate.responsibility >= 70 ? 'Independent' : 'Guided'}
-                </div>
+            <div>
+              <div className="text-xs text-[#96968F]">Learning Progress</div>
+              <div className="text-sm font-semibold text-[#1C1C1A] mt-0.5">78% progress</div>
+              <div className="w-full h-1.5 bg-[#F1F0EB] rounded-full mt-1.5 overflow-hidden">
+                <div className="h-full bg-[#4F46E5] w-[78%]" />
               </div>
             </div>
           </div>
+
+          {/* Bio */}
+          <div className="space-y-1.5">
+            <div className="text-xs font-semibold text-[#96968F] uppercase tracking-wider">Background Summary</div>
+            <p className="text-xs text-[#686862] leading-relaxed">
+              {selectedCandidate.bio}
+            </p>
+          </div>
+
+          {/* Interview Focus Areas */}
+          <div className="space-y-3 pt-2">
+            <div className="text-xs font-semibold text-[#96968F] uppercase tracking-wider">
+              Interview Areas
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              {CURRICULUM_FOCUS_AREAS.map((topic, i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between p-2.5 rounded-md bg-[#FCFCFA] border border-[#E4E2DB]"
+                >
+                  <span className="font-medium text-[#1C1C1A]">{topic.name}</span>
+                  <span className="text-[11px] font-mono text-[#96968F]">{topic.day}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Start Action */}
+          {onStartInterview && (
+            <div className="pt-4 border-t border-[#E4E2DB] flex justify-end">
+              <button
+                onClick={() => onStartInterview(selectedCandidate.id)}
+                className="flex items-center space-x-2 px-5 py-2.5 rounded-md bg-[#4F46E5] hover:bg-[#4338CA] text-[#FFFFFF] font-semibold text-xs transition-colors cursor-pointer"
+              >
+                <span>Start Interview</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
