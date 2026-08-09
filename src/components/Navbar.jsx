@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bot, Users, Sparkles, Award } from 'lucide-react';
+import { Bot, Users, Sparkles } from 'lucide-react';
 
 export default function Navbar({ activeTab, setActiveTab, candidatesCount }) {
   const navItems = [
@@ -13,7 +13,7 @@ export default function Navbar({ activeTab, setActiveTab, candidatesCount }) {
         <div className="flex items-center justify-between h-16">
           {/* Brand Logo */}
           <div 
-            className="flex items-center space-x-3 cursor-pointer group" 
+            className="flex items-center space-x-3 cursor-pointer group select-none" 
             onClick={() => setActiveTab('candidates')}
           >
             <div className="w-9 h-9 rounded-xl bg-[#2563EB] flex items-center justify-center text-white font-bold text-sm shadow-xs group-hover:bg-[#1D4ED8] transition-colors">
@@ -30,7 +30,7 @@ export default function Navbar({ activeTab, setActiveTab, candidatesCount }) {
           </div>
 
           {/* Navigation Links */}
-          <nav className="hidden md:flex items-center space-x-1">
+          <nav className="hidden md:flex items-center space-x-1 select-none">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -57,10 +57,10 @@ export default function Navbar({ activeTab, setActiveTab, candidatesCount }) {
           </nav>
 
           {/* Right Status Indicator */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 select-none">
             <div className="hidden lg:flex items-center space-x-2 text-xs font-mono text-[#64748B] bg-[#F8FAFC] px-3 py-1.5 rounded-xl border border-[#E2E8F0]">
               <span className="w-2 h-2 rounded-full bg-[#16A34A] animate-pulse" />
-              <span>{candidatesCount} Roster Candidates</span>
+              <span>{candidatesCount} Candidate Profiles</span>
               <span>•</span>
               <span className="text-[#2563EB] font-bold">RAG Grounded</span>
             </div>
@@ -68,7 +68,7 @@ export default function Navbar({ activeTab, setActiveTab, candidatesCount }) {
         </div>
 
         {/* Mobile Tab Bar */}
-        <div className="md:hidden flex overflow-x-auto space-x-2 py-2 border-t border-[#E2E8F0]">
+        <div className="md:hidden flex overflow-x-auto space-x-2 py-2 border-t border-[#E2E8F0] select-none">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;

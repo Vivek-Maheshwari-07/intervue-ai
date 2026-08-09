@@ -6,21 +6,19 @@ import { INITIAL_CANDIDATES } from './data/mockData';
 import { useInterview } from './hooks/useInterview';
 
 export default function App() {
-  // Default home view is candidate roster overview
   const [activeTab, setActiveTab] = useState('candidates');
   const [candidates] = useState(INITIAL_CANDIDATES);
 
   // Single Canonical Interview State Hook
   const interviewState = useInterview();
 
-  // Handler for Start AI Interview trigger from Candidate Overview
   const handleStartInterviewFromProfile = (candidateId) => {
     interviewState.startSession(candidateId);
     setActiveTab('interviewer');
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] font-sans flex flex-col selection:bg-[#EFF6FF] selection:text-[#2563EB]">
+    <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] flex flex-col font-sans selection:bg-[#DBEAFE] selection:text-[#1E40AF]">
       {/* Top Navigation */}
       <Navbar
         activeTab={activeTab}
@@ -46,14 +44,18 @@ export default function App() {
         )}
       </main>
 
-      {/* Modern Light Footer */}
+      {/* Footer */}
       <footer className="border-t border-[#E2E8F0] bg-[#FFFFFF] py-6 text-xs text-[#64748B]">
         <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center space-x-2">
-            <span className="font-extrabold text-[#0F172A] font-mono tracking-tight">INTERVUE <span className="text-[#2563EB]">AI</span></span>
-            <span className="text-[#94A3B8]">— Adaptive Technical Interviewer</span>
+            <span className="font-extrabold text-[#0F172A] font-mono tracking-tight">
+              INTERVUE <span className="text-[#2563EB]">AI</span>
+            </span>
+            <span className="text-[#94A3B8]">
+              — Adaptive Technical Interviewer
+            </span>
           </div>
-          <div className="text-[#64748B]">
+          <div>
             <span>Engineered by <strong>Vivek Maheshwari, Aayush Malhotra, Manav Lathiya</strong></span>
           </div>
         </div>
